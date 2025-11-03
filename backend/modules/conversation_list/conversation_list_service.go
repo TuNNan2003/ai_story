@@ -3,6 +3,7 @@ package conversation_list
 import (
 	"grandma/backend/models"
 	"grandma/backend/repository"
+	"grandma/backend/utils"
 )
 
 type ConversationListService struct {
@@ -37,3 +38,17 @@ func (s *ConversationListService) GetConversationList(page, pageSize int) (*mode
 	}, nil
 }
 
+// CreateNewConversation 创建新对话
+func (s *ConversationListService) CreateNewConversation() (*models.Conversation, error) {
+	conversationID := utils.GenerateConversationID()
+	conversation := &models.Conversation{
+		ID:          conversationID,
+		Title:       "新对话",
+		DocumentIDs: "",
+	}
+	err := s.conversationRepo.Create(conversation)
+	if err != nil {
+		return nil, err
+	}
+	return conversation, nil
+}

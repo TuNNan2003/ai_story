@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import MessageList from './MessageList'
-import InputArea from './InputArea'
+import EnhancedInputArea from './EnhancedInputArea'
 import './ChatContainer.css'
 
-function ChatContainer({ messages, onSendMessage, isLoading }) {
+function ChatContainer({ messages, onSendMessage, isLoading, models, selectedModel, onModelChange }) {
   const containerRef = useRef(null)
 
   useEffect(() => {
@@ -18,7 +18,13 @@ function ChatContainer({ messages, onSendMessage, isLoading }) {
       <div className="chat-messages" ref={containerRef}>
         <MessageList messages={messages} isLoading={isLoading} />
       </div>
-      <InputArea onSendMessage={onSendMessage} isLoading={isLoading} />
+      <EnhancedInputArea
+        onSendMessage={onSendMessage}
+        isLoading={isLoading}
+        models={models}
+        selectedModel={selectedModel}
+        onModelChange={onModelChange}
+      />
     </div>
   )
 }

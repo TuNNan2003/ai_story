@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import ChatContainer from './components/ChatContainer'
-import Sidebar from './components/Sidebar'
+import ConversationHistory from './components/ConversationHistory'
 import './App.css'
 
 function App() {
@@ -8,9 +8,13 @@ function App() {
   const [selectedModel, setSelectedModel] = useState('openai')
   const [models, setModels] = useState([])
   const [isLoading, setIsLoading] = useState(false)
+  const [currentConversationId, setCurrentConversationId] = useState(null)
+  const [conversations, setConversations] = useState([])
+  const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(false)
 
   useEffect(() => {
     fetchModels()
+    fetchConversations()
   }, [])
 
   const fetchModels = async () => {
@@ -26,8 +30,82 @@ function App() {
     }
   }
 
+  const fetchConversations = async () => {
+    try {
+      const response = await fetch('/api/conversations?page=1&page_size=50')
+      const data = await response.json()
+      setConversations(data.conversations || [])
+    } catch (error) {
+      console.error('Failed to fetch conversations:', error)
+    }
+  }
+
+  const handleNewChat = async () => {
+    try {
+      const response = await fetch('/api/conversations/new', {
+        method: 'POST',
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setCurrentConversationId(data.id)
+        setMessages([])
+        fetchConversations()
+      }
+    } catch (error) {
+      console.error('Failed to create new conversation:', error)
+    }
+  }
+
+  const handleSelectConversation = async (conversationId) => {
+    setCurrentConversationId(conversationId)
+    try {
+      // 获取对话的文档列表
+      const response = await fetch(`/api/documents?conversation_id=${conversationId}`)
+      if (response.ok) {
+        const data = await response.json()
+        const conversationMessages = data.documents.map((doc) => ({
+          id: doc.id,
+          role: doc.role,
+          content: doc.content,
+        }))
+        setMessages(conversationMessages)
+      }
+    } catch (error) {
+      console.error('Failed to load conversation:', error)
+    }
+  }
+
+  const getOrCreateConversationId = async () => {
+    // 如果已有对话ID，直接返回
+    if (currentConversationId) {
+      return currentConversationId
+    }
+    // 如果没有对话ID，创建新对话
+    try {
+      const response = await fetch('/api/conversations/new', {
+        method: 'POST',
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setCurrentConversationId(data.id)
+        fetchConversations()
+        return data.id
+      }
+    } catch (error) {
+      console.error('Failed to create conversation:', error)
+    }
+    return null
+  }
+
   const handleSendMessage = async (message) => {
     if (!message.trim() || isLoading) return
+
+    // 首先获取或创建对话ID
+    const conversationId = await getOrCreateConversationId()
+    if (!conversationId) {
+      console.error('Failed to get conversation ID')
+      return
+    }
 
     const userMessage = {
       id: Date.now(),
@@ -53,6 +131,7 @@ function App() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          conversation_id: conversationId,
           model: selectedModel,
           messages: [
             {
@@ -87,6 +166,8 @@ function App() {
           return newMessages
         })
       }
+      // 刷新对话列表以更新标题
+      await fetchConversations()
     } catch (error) {
       console.error('Error:', error)
       setMessages((prev) => {
@@ -102,23 +183,38 @@ function App() {
     }
   }
 
-  const handleNewChat = () => {
-    setMessages([])
-  }
-
   return (
     <div className="app">
-      <Sidebar
-        models={models}
-        selectedModel={selectedModel}
-        onModelChange={setSelectedModel}
-        onNewChat={handleNewChat}
+      <ConversationHistory
+        conversations={conversations}
+        currentConversationId={currentConversationId}
+        onSelectConversation={handleSelectConversation}
+        isCollapsed={isHistoryCollapsed}
+        onToggleCollapse={() => setIsHistoryCollapsed(!isHistoryCollapsed)}
       />
-      <ChatContainer
-        messages={messages}
-        onSendMessage={handleSendMessage}
-        isLoading={isLoading}
-      />
+      <div className="main-content">
+        <div className="new-chat-button-container">
+          <button onClick={handleNewChat} className="new-chat-button-top">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path
+                d="M8 1v14M1 8h14"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+            新对话
+          </button>
+        </div>
+        <ChatContainer
+          messages={messages}
+          onSendMessage={handleSendMessage}
+          isLoading={isLoading}
+          models={models}
+          selectedModel={selectedModel}
+          onModelChange={setSelectedModel}
+        />
+      </div>
     </div>
   )
 }

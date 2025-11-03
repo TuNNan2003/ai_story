@@ -4,3 +4,36 @@
   background-color: #343541;
 }
 
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.new-chat-button-container {
+  padding: 16px;
+  border-bottom: 1px solid #565869;
+  background-color: #343541;
+}
+
+.new-chat-button-top {
+  padding: 10px 16px;
+  background-color: transparent;
+  border: 1px solid #565869;
+  border-radius: 8px;
+  color: #ececf1;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.new-chat-button-top:hover {
+  background-color: #40414f;
+  border-color: #717386;
+}
+

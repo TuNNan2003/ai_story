@@ -58,3 +58,23 @@ func (r *DocumentRepository) DeleteByConversationID(conversationID string) error
 	return r.db.Where("conversation_id = ?", conversationID).Delete(&models.Document{}).Error
 }
 
+// AppendContent 追加内容到文档（用于流式更新）
+func (r *DocumentRepository) AppendContent(id string, content string) error {
+	var doc models.Document
+	err := r.db.Where("id = ?", id).First(&doc).Error
+	if err != nil {
+		return err
+	}
+	doc.Content = doc.Content + content
+	doc.UpdatedAt = time.Now()
+	return r.db.Save(&doc).Error
+}
+
+// UpdateContent 更新文档内容（用于流式更新的初始设置）
+func (r *DocumentRepository) UpdateContent(id string, content string) error {
+	return r.db.Model(&models.Document{}).
+		Where("id = ?", id).
+		Update("content", content).
+		Update("updated_at", time.Now()).
+		Error
+}

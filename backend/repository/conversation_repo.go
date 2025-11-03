@@ -74,3 +74,23 @@ func (r *ConversationRepository) UpdateTitle(id, title string) error {
 	return r.db.Model(&models.Conversation{}).Where("id = ?", id).Update("title", title).Error
 }
 
+// AppendDocumentID 添加文档ID到对话的文档ID列表
+func (r *ConversationRepository) AppendDocumentID(id, documentID string) error {
+	conversation, err := r.GetByID(id)
+	if err != nil {
+		return err
+	}
+
+	var newDocumentIDs string
+	if conversation.DocumentIDs == "" {
+		newDocumentIDs = documentID
+	} else {
+		newDocumentIDs = conversation.DocumentIDs + "," + documentID
+	}
+
+	return r.db.Model(&models.Conversation{}).
+		Where("id = ?", id).
+		Update("document_ids", newDocumentIDs).
+		Update("updated_at", time.Now()).
+		Error
+}

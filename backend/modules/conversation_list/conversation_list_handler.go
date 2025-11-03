@@ -1,7 +1,6 @@
 package conversation_list
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -20,7 +19,6 @@ func NewConversationListHandler(service *ConversationListService) *ConversationL
 
 // GetConversationList 获取对话列表
 func (h *ConversationListHandler) GetConversationList(c *gin.Context) {
-	fmt.Println("[conversation_list_handler GetConversationList] Start")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
 
@@ -31,4 +29,15 @@ func (h *ConversationListHandler) GetConversationList(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, response)
+}
+
+// CreateNewConversation 创建新对话
+func (h *ConversationListHandler) CreateNewConversation(c *gin.Context) {
+	conversation, err := h.service.CreateNewConversation()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, conversation)
 }

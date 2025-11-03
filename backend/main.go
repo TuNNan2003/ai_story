@@ -81,6 +81,7 @@ func main() {
 
 		// 对话列表模块
 		api.GET("/conversations", conversationListHdlr.GetConversationList)
+		api.POST("/conversations/new", conversationListHdlr.CreateNewConversation)
 
 		// 对话管理模块
 		api.GET("/conversations/:id", conversationHdlr.GetConversationByID)
