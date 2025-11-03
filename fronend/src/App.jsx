@@ -46,6 +46,7 @@ function App() {
     setMessages((prev) => [...prev, assistantMessage])
 
     try {
+      // 前端仅携带本次用户请求的内容
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -53,7 +54,12 @@ function App() {
         },
         body: JSON.stringify({
           model: selectedModel,
-          message: message,
+          messages: [
+            {
+              role: 'user',
+              content: message,
+            },
+          ],
         }),
       })
 

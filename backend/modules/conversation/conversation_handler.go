@@ -1,6 +1,7 @@
 package conversation
 
 import (
+	"fmt"
 	"grandma/backend/models"
 	"net/http"
 
@@ -19,6 +20,7 @@ func NewConversationHandler(service *ConversationService) *ConversationHandler {
 
 // GetConversationByID 根据ID获取对话
 func (h *ConversationHandler) GetConversationByID(c *gin.Context) {
+	fmt.Println("[conversation_handler GetConversationByID] Start")
 	id := c.Param("id")
 	conv, err := h.service.GetConversationByID(id)
 	if err != nil {
@@ -31,6 +33,7 @@ func (h *ConversationHandler) GetConversationByID(c *gin.Context) {
 
 // CreateConversation 创建对话
 func (h *ConversationHandler) CreateConversation(c *gin.Context) {
+	fmt.Println("[conversation_handler CreateConversation] Start")
 	var req struct {
 		Title string `json:"title"`
 	}
@@ -54,6 +57,7 @@ func (h *ConversationHandler) CreateConversation(c *gin.Context) {
 
 // UpdateConversation 更新对话
 func (h *ConversationHandler) UpdateConversation(c *gin.Context) {
+	fmt.Println("[conversation_handler UpdateConversation] Start")
 	id := c.Param("id")
 	var conv models.Conversation
 	if err := c.ShouldBindJSON(&conv); err != nil {
@@ -73,6 +77,7 @@ func (h *ConversationHandler) UpdateConversation(c *gin.Context) {
 
 // UpdateConversationTitle 更新对话标题
 func (h *ConversationHandler) UpdateConversationTitle(c *gin.Context) {
+	fmt.Println("[conversation_handler UpdateConversationTitle] Start")
 	id := c.Param("id")
 	var req struct {
 		Title string `json:"title" binding:"required"`
@@ -93,6 +98,7 @@ func (h *ConversationHandler) UpdateConversationTitle(c *gin.Context) {
 
 // DeleteConversation 删除对话
 func (h *ConversationHandler) DeleteConversation(c *gin.Context) {
+	fmt.Println("[conversation_handler DeleteConversation] Start")
 	id := c.Param("id")
 	err := h.service.DeleteConversation(id)
 	if err != nil {
@@ -102,4 +108,3 @@ func (h *ConversationHandler) DeleteConversation(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Conversation deleted successfully"})
 }
-

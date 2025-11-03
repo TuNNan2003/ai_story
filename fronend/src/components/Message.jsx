@@ -1,4 +1,4 @@
-import Typewriter from './Typewriter'
+import MarkdownRenderer from './MarkdownRenderer'
 import './Message.css'
 
 function Message({ message }) {
@@ -7,13 +7,13 @@ function Message({ message }) {
   return (
     <div className={`message ${isUser ? 'message-user' : 'message-assistant'}`}>
       <div className="message-content">
-        {isUser ? (
-          <div className="message-text">{message.content}</div>
-        ) : (
-          <div className="message-text">
-            <Typewriter text={message.content} speed={20} />
-          </div>
-        )}
+        <div className="message-text">
+          {isUser ? (
+            <div className="user-text">{message.content}</div>
+          ) : (
+            <MarkdownRenderer text={message.content} speed={20} />
+          )}
+        </div>
       </div>
     </div>
   )

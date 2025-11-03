@@ -1,5 +1,5 @@
 .message-list {
-  max-width: 768px;
+  max-width: 100%;
   margin: 0 auto;
   padding: 0 20px;
 }
@@ -13,7 +13,7 @@
 
 .welcome-message {
   text-align: center;
-  color: #8e8ea0;
+  color: #ececf1;
 }
 
 .welcome-message h1 {

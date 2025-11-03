@@ -2,32 +2,52 @@
   padding: 20px;
   display: flex;
   gap: 16px;
+  justify-content: flex-start;
 }
 
+/* 用户消息在右侧 */
 .message-user {
-  background-color: #343541;
+  justify-content: flex-end;
 }
 
+.message-user .message-content {
+  background-color: #10a37f;
+  border-radius: 12px 12px 4px 12px;
+  padding: 12px 16px;
+  max-width: 70%;
+  margin-left: auto;
+  margin-right: 0;
+}
+
+/* AI消息在左侧 */
 .message-assistant {
-  background-color: #444654;
+  justify-content: flex-start;
 }
 
-.message-content {
-  flex: 1;
-  max-width: 768px;
-  margin: 0 auto;
+.message-assistant .message-content {
+  background-color: #2f2f2f;
+  border-radius: 12px 12px 12px 4px;
+  padding: 12px 16px;
+  max-width: 70%;
+  margin-right: auto;
+  margin-left: 0;
 }
 
 .message-text {
   color: #ececf1;
   font-size: 16px;
   line-height: 1.75;
-  white-space: pre-wrap;
   word-wrap: break-word;
 }
 
 .message-user .message-text {
-  color: #ececf1;
+  color: #ffffff;
+  white-space: pre-wrap;
+}
+
+.user-text {
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
 
 .message-assistant .message-text {

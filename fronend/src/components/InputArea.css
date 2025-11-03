@@ -1,6 +1,5 @@
 .input-area {
   padding: 20px;
-  background-color: #343541;
   border-top: 1px solid #565869;
 }
 
@@ -13,7 +12,6 @@
   background-color: #40414f;
   border-radius: 12px;
   padding: 12px;
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
 }
 
 .input-textarea {
@@ -35,10 +33,6 @@
   color: #8e8ea0;
 }
 
-.input-textarea:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
 
 .input-button {
   background-color: transparent;

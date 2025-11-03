@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"grandma/backend/models"
 	"io"
 	"net/http"
 )
@@ -20,19 +21,23 @@ func NewAnthropicProvider(apiKey, baseURL string) *AnthropicProvider {
 	}
 }
 
-func (p *AnthropicProvider) ChatStream(message string, writer io.Writer) error {
+func (p *AnthropicProvider) ChatStream(messages []models.Message, writer io.Writer) error {
 	url := fmt.Sprintf("%s/v1/messages", p.BaseURL)
 
+	// 将消息数组转换为API格式
+	apiMessages := make([]map[string]string, len(messages))
+	for i, msg := range messages {
+		apiMessages[i] = map[string]string{
+			"role":    msg.Role,
+			"content": msg.Content,
+		}
+	}
+
 	payload := map[string]interface{}{
-		"model":     "claude-3-5-sonnet-20241022",
+		"model":      "claude-3-5-sonnet-20241022",
 		"max_tokens": 4096,
-		"messages": []map[string]string{
-			{
-				"role":    "user",
-				"content": message,
-			},
-		},
-		"stream": true,
+		"messages":   apiMessages,
+		"stream":     true,
 	}
 
 	jsonData, err := json.Marshal(payload)
@@ -64,7 +69,7 @@ func (p *AnthropicProvider) ChatStream(message string, writer io.Writer) error {
 	decoder := json.NewDecoder(resp.Body)
 	for {
 		var event struct {
-			Type string `json:"type"`
+			Type  string `json:"type"`
 			Delta struct {
 				Text string `json:"text"`
 			} `json:"delta,omitempty"`
@@ -88,4 +93,3 @@ func (p *AnthropicProvider) ChatStream(message string, writer io.Writer) error {
 
 	return nil
 }
-

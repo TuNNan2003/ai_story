@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"fmt"
 	"grandma/backend/models"
 	"io"
 	"net/http"
@@ -20,8 +21,10 @@ func NewChatHandler(chatService *ChatService) *ChatHandler {
 
 // Chat 处理聊天请求
 func (h *ChatHandler) Chat(c *gin.Context) {
+	fmt.Println("[chat_handler Chat] Start")
 	var req models.ChatRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		fmt.Println("[chat_handler Chat] Error: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -37,8 +40,10 @@ func (h *ChatHandler) Chat(c *gin.Context) {
 	writer := &streamWriter{writer: c.Writer}
 
 	// 发送消息并获取响应
+	fmt.Printf("[chat_handler Chat] Req:%+v\n", req)
 	conversationID, documentID, err := h.chatService.SendMessage(&req, writer)
 	if err != nil {
+		fmt.Printf("[chat_handler Chat] Req:%+v, Error: %v\n", req, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

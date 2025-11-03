@@ -2,9 +2,14 @@ package models
 
 // ChatRequest 聊天请求
 type ChatRequest struct {
-	ConversationID string `json:"conversation_id"` // 可选，如果为空则创建新对话
-	Model          string `json:"model" binding:"required"`
-	Message        string `json:"message" binding:"required"`
+	ConversationID string    `json:"conversation_id"` // 可选，如果为空则创建新对话
+	Model          string    `json:"model" binding:"required"`
+	Messages       []Message `json:"messages" binding:"required"`
+}
+
+type Message struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
 }
 
 // ConversationListRequest 对话列表请求
@@ -31,4 +36,3 @@ type DocumentListResponse struct {
 	Documents []Document `json:"documents"`
 	Total     int        `json:"total"`
 }
-

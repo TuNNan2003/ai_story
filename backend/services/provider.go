@@ -2,11 +2,12 @@ package services
 
 import (
 	"fmt"
+	"grandma/backend/models"
 	"io"
 )
 
 type ChatProvider interface {
-	ChatStream(message string, writer io.Writer) error
+	ChatStream(messages []models.Message, writer io.Writer) error
 }
 
 func GetProvider(providerName, openaiKey, openaiURL, anthropicKey, anthropicURL string) (ChatProvider, error) {
@@ -25,4 +26,3 @@ func GetProvider(providerName, openaiKey, openaiURL, anthropicKey, anthropicURL 
 		return nil, fmt.Errorf("unsupported provider: %s", providerName)
 	}
 }
-

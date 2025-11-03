@@ -3,7 +3,6 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background-color: #343541;
   overflow: hidden;
 }
 
@@ -19,7 +18,7 @@
 }
 
 .chat-messages::-webkit-scrollbar-track {
-  background: #343541;
+  background: transparent;
 }
 
 .chat-messages::-webkit-scrollbar-thumb {

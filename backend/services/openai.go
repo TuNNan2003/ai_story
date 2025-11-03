@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"grandma/backend/models"
 	"io"
 	"net/http"
 )
@@ -20,18 +21,22 @@ func NewOpenAIProvider(apiKey, baseURL string) *OpenAIProvider {
 	}
 }
 
-func (p *OpenAIProvider) ChatStream(message string, writer io.Writer) error {
+func (p *OpenAIProvider) ChatStream(messages []models.Message, writer io.Writer) error {
 	url := fmt.Sprintf("%s/chat/completions", p.BaseURL)
 
+	// 将消息数组转换为API格式
+	apiMessages := make([]map[string]string, len(messages))
+	for i, msg := range messages {
+		apiMessages[i] = map[string]string{
+			"role":    msg.Role,
+			"content": msg.Content,
+		}
+	}
+
 	payload := map[string]interface{}{
-		"model": "gpt-3.5-turbo",
-		"messages": []map[string]string{
-			{
-				"role":    "user",
-				"content": message,
-			},
-		},
-		"stream": true,
+		"model":    "deepseek-chat",
+		"messages": apiMessages,
+		"stream":   true,
 	}
 
 	jsonData, err := json.Marshal(payload)
@@ -69,7 +74,7 @@ func (p *OpenAIProvider) ChatStream(message string, writer io.Writer) error {
 				if line == "" || line == "[DONE]" {
 					continue
 				}
-				
+
 				var streamResp struct {
 					Choices []struct {
 						Delta struct {
@@ -101,7 +106,7 @@ func (p *OpenAIProvider) ChatStream(message string, writer io.Writer) error {
 func parseSSE(data string) []string {
 	var lines []string
 	current := ""
-	
+
 	for _, char := range data {
 		if char == '\n' {
 			if current != "" {
@@ -117,7 +122,6 @@ func parseSSE(data string) []string {
 	if current != "" && len(current) > 6 && current[:6] == "data: " {
 		lines = append(lines, current[6:])
 	}
-	
+
 	return lines
 }
-

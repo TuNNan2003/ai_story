@@ -26,7 +26,9 @@ function InputArea({ onSendMessage, isLoading }) {
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      handleSubmit(e)
+      if (!isLoading && input.trim()) {
+        handleSubmit(e)
+      }
     }
   }
 
@@ -40,7 +42,6 @@ function InputArea({ onSendMessage, isLoading }) {
           onKeyDown={handleKeyDown}
           placeholder="输入你的想法或问题..."
           rows={1}
-          disabled={isLoading}
           className="input-textarea"
         />
         <button
