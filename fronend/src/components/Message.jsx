@@ -1,7 +1,7 @@
 import MarkdownRenderer from './MarkdownRenderer'
 import './Message.css'
 
-function Message({ message }) {
+function Message({ message, enableTypewriter = true }) {
   const isUser = message.role === 'user'
 
   return (
@@ -11,7 +11,7 @@ function Message({ message }) {
           {isUser ? (
             <div className="user-text">{message.content}</div>
           ) : (
-            <MarkdownRenderer text={message.content} speed={20} />
+            <MarkdownRenderer text={message.content} speed={20} enableTypewriter={enableTypewriter} />
           )}
         </div>
       </div>

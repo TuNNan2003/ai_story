@@ -28,7 +28,7 @@ type ConversationListResponse struct {
 
 // DocumentListRequest 文档列表请求
 type DocumentListRequest struct {
-	ConversationID string `json:"conversation_id" binding:"required"`
+	ConversationID string `json:"conversation_id" form:"conversation_id" binding:"required"`
 }
 
 // DocumentListResponse 文档列表响应

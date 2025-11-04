@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"fmt"
 	"grandma/backend/models"
 	"time"
 
@@ -37,8 +38,10 @@ func (r *DocumentRepository) GetByConversationID(conversationID string) ([]model
 	var documents []models.Document
 	err := r.db.Where("conversation_id = ?", conversationID).Order("created_at ASC").Find(&documents).Error
 	if err != nil {
+		fmt.Printf("[document_repo GetByConversationID] Error: %+v\n", err)
 		return nil, err
 	}
+	fmt.Printf("[document_repo GetByConversationID] Documents: %+v\n", documents)
 	return documents, nil
 }
 

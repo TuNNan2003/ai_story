@@ -59,4 +59,3 @@ func (s *DocumentService) CreateDocument(conversationID, role, content, model st
 	}
 	return doc, nil
 }
-

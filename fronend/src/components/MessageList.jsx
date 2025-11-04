@@ -1,7 +1,7 @@
 import Message from './Message'
 import './MessageList.css'
 
-function MessageList({ messages, isLoading }) {
+function MessageList({ messages, isLoading, enableTypewriter = true }) {
   if (messages.length === 0) {
     return null
   }
@@ -9,7 +9,7 @@ function MessageList({ messages, isLoading }) {
   return (
     <div className="message-list">
       {messages.map((message) => (
-        <Message key={message.id} message={message} />
+        <Message key={message.id} message={message} enableTypewriter={enableTypewriter} />
       ))}
       {isLoading && messages[messages.length - 1]?.role === 'assistant' && (
         <div className="typing-indicator">

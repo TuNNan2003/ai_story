@@ -11,6 +11,7 @@ function App() {
   const [currentConversationId, setCurrentConversationId] = useState(null)
   const [conversations, setConversations] = useState([])
   const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(false)
+  const [isHistoryView, setIsHistoryView] = useState(false)
 
   useEffect(() => {
     fetchModels()
@@ -49,6 +50,7 @@ function App() {
         const data = await response.json()
         setCurrentConversationId(data.id)
         setMessages([])
+        setIsHistoryView(false) // 新对话，不是历史视图
         fetchConversations()
       }
     } catch (error) {
@@ -63,12 +65,14 @@ function App() {
       const response = await fetch(`/api/documents?conversation_id=${conversationId}`)
       if (response.ok) {
         const data = await response.json()
+        // 按照 created_at 排序（后端已经按 created_at ASC 排序）
         const conversationMessages = data.documents.map((doc) => ({
           id: doc.id,
           role: doc.role,
           content: doc.content,
         }))
         setMessages(conversationMessages)
+        setIsHistoryView(true) // 加载历史对话后，设置为历史视图
       }
     } catch (error) {
       console.error('Failed to load conversation:', error)
@@ -81,6 +85,7 @@ function App() {
       return currentConversationId
     }
     // 如果没有对话ID，创建新对话
+    // 注意：这里不刷新列表，因为新对话还没有标题，等到第一次发送消息后再刷新
     try {
       const response = await fetch('/api/conversations/new', {
         method: 'POST',
@@ -88,7 +93,6 @@ function App() {
       if (response.ok) {
         const data = await response.json()
         setCurrentConversationId(data.id)
-        fetchConversations()
         return data.id
       }
     } catch (error) {
@@ -99,6 +103,12 @@ function App() {
 
   const handleSendMessage = async (message) => {
     if (!message.trim() || isLoading) return
+
+    // 检查是否是新对话（第一次发送消息）
+    const isNewConversation = !currentConversationId
+
+    // 发送新消息时，切换到非历史视图（使用打字机效果）
+    setIsHistoryView(false)
 
     // 首先获取或创建对话ID
     const conversationId = await getOrCreateConversationId()
@@ -166,8 +176,11 @@ function App() {
           return newMessages
         })
       }
-      // 刷新对话列表以更新标题
-      await fetchConversations()
+      // 只有在新对话第一次发送消息时才刷新列表（更新标题）
+      // 已存在的对话不需要刷新，因为用户已经在当前对话中
+      if (isNewConversation) {
+        await fetchConversations()
+      }
     } catch (error) {
       console.error('Error:', error)
       setMessages((prev) => {
@@ -213,6 +226,7 @@ function App() {
           models={models}
           selectedModel={selectedModel}
           onModelChange={setSelectedModel}
+          enableTypewriter={!isHistoryView}
         />
       </div>
     </div>

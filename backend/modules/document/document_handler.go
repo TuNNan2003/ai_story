@@ -23,6 +23,7 @@ func (h *DocumentHandler) GetDocumentList(c *gin.Context) {
 	fmt.Println("[document_handler GetDocumentList] Start")
 	var req models.DocumentListRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
+		fmt.Printf("[document_handler GetDocumentList] Error: %+v\n", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import './MarkdownRenderer.css'
 
-function MarkdownRenderer({ text, speed = 20 }) {
+function MarkdownRenderer({ text, speed = 20, enableTypewriter = true }) {
   const [displayedText, setDisplayedText] = useState('')
   const prevTextRef = useRef('')
   const currentIndexRef = useRef(0)
@@ -14,6 +14,18 @@ function MarkdownRenderer({ text, speed = 20 }) {
       setDisplayedText('')
       prevTextRef.current = ''
       currentIndexRef.current = 0
+      if (timeoutIdRef.current) {
+        clearTimeout(timeoutIdRef.current)
+        timeoutIdRef.current = null
+      }
+      return
+    }
+
+    // 如果禁用打字机效果，直接显示完整文本
+    if (!enableTypewriter) {
+      setDisplayedText(text)
+      prevTextRef.current = text
+      currentIndexRef.current = text.length
       if (timeoutIdRef.current) {
         clearTimeout(timeoutIdRef.current)
         timeoutIdRef.current = null
@@ -68,7 +80,7 @@ function MarkdownRenderer({ text, speed = 20 }) {
         timeoutIdRef.current = null
       }
     }
-  }, [text, speed])
+  }, [text, speed, enableTypewriter])
 
   return (
     <div className="markdown-content">

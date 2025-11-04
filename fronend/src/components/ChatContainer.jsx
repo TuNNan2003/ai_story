@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect } from 'react'
+import { useRef, useEffect } from 'react'
 import MessageList from './MessageList'
 import EnhancedInputArea from './EnhancedInputArea'
 import './ChatContainer.css'
 
-function ChatContainer({ messages, onSendMessage, isLoading, models, selectedModel, onModelChange }) {
+function ChatContainer({ messages, onSendMessage, isLoading, models, selectedModel, onModelChange, enableTypewriter = true }) {
   const containerRef = useRef(null)
 
   useEffect(() => {
@@ -16,7 +16,7 @@ function ChatContainer({ messages, onSendMessage, isLoading, models, selectedMod
   return (
     <div className="chat-container">
       <div className="chat-messages" ref={containerRef}>
-        <MessageList messages={messages} isLoading={isLoading} />
+        <MessageList messages={messages} isLoading={isLoading} enableTypewriter={enableTypewriter} />
       </div>
       <EnhancedInputArea
         onSendMessage={onSendMessage}
