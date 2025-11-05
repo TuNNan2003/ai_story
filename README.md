@@ -156,6 +156,8 @@ grandma是一个前后端分离的AI故事创作APP，用户可以与AI合作，
     - 调用 `/api/conversations/generate-title` 接口生成标题
     - 使用生成的标题重命名旧对话
 
+## v0.3.6 Features
+
 
 ## 快速开始
 

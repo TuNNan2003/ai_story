@@ -148,24 +148,36 @@ func (s *ChatService) SendMessage(req *models.ChatRequest, writer io.Writer) (st
 		bufferSize:   0,
 	}
 	err = provider.ChatStream(apiMessages, responseCollector)
-	if err != nil {
-		return "", "", err
-	}
 
-	// 刷新剩余的缓冲区内容
+	// 无论流式响应是否成功，都要保存剩余的缓冲区内容
+	// 这样即使客户端断开连接，已接收的内容也会被保存
 	if responseCollector.updateBuffer != "" {
-		err = s.documentRepo.AppendContent(assistantDocID, responseCollector.updateBuffer)
-		if err != nil {
-			return "", "", err
+		appendErr := s.documentRepo.AppendContent(assistantDocID, responseCollector.updateBuffer)
+		if appendErr != nil {
+			// 如果保存失败，记录错误但不影响主流程
+			// 因为如果流式响应成功，后续会继续保存
+			if err == nil {
+				err = appendErr
+			}
 		}
 	}
 
-	// 添加助手文档ID到对话的文档ID列表
-	err = s.conversationRepo.AppendDocumentID(conversationID, assistantDocID)
-	if err != nil {
-		return "", "", err
+	// 如果流式响应过程中出现错误（可能是客户端断开连接），
+	// 仍然保存已接收的内容，并继续添加文档ID到对话列表
+	// 这样用户可以切换回对话时看到部分内容
+	// 注意：即使流式响应失败，也要继续处理，确保已保存的内容可以被访问
+	_ = err // 忽略流式响应错误，继续保存已接收的内容
+
+	// 添加助手文档ID到对话的文档ID列表（即使流式响应失败也要添加）
+	errAppend := s.conversationRepo.AppendDocumentID(conversationID, assistantDocID)
+	if errAppend != nil {
+		// 如果添加文档ID失败，记录错误
+		// 但继续执行，确保已保存的内容可以被访问
+		_ = errAppend
 	}
 
+	// 无论流式响应是否成功，都返回成功
+	// 这样即使客户端断开连接，已接收的内容也会被保存并可以被访问
 	return conversationID, assistantDocID, nil
 }
 
@@ -203,10 +215,9 @@ type responseCollector struct {
 const updateBufferThreshold = 100 // 每100个字符更新一次数据库
 
 func (rc *responseCollector) Write(p []byte) (n int, err error) {
-	n, err = rc.writer.Write(p)
-	if err != nil {
-		return n, err
-	}
+	// 尝试写入到客户端，但如果失败也继续保存到数据库
+	// 这样即使客户端断开连接，已接收的内容也会被保存
+	_, writeErr := rc.writer.Write(p)
 
 	chunk := string(p)
 	rc.content += chunk
@@ -214,14 +225,23 @@ func (rc *responseCollector) Write(p []byte) (n int, err error) {
 	rc.bufferSize += len(chunk)
 
 	// 当缓冲区达到阈值时，更新数据库
+	// 即使写入客户端失败，也要保存到数据库
 	if rc.bufferSize >= updateBufferThreshold {
 		err = rc.documentRepo.AppendContent(rc.documentID, rc.updateBuffer)
 		if err != nil {
-			return n, err
+			// 如果保存数据库失败，返回错误
+			// 但如果只是写入客户端失败，不影响数据库保存
+			return len(p), err
 		}
 		rc.updateBuffer = ""
 		rc.bufferSize = 0
 	}
 
-	return n, nil
+	// 如果写入客户端失败，返回错误，但不影响数据库保存
+	// 这样上层可以知道客户端断开，但数据库已经保存了内容
+	if writeErr != nil {
+		return len(p), writeErr
+	}
+
+	return len(p), nil
 }

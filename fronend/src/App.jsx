@@ -232,7 +232,12 @@ function App() {
       return
     }
 
+    // 保存旧对话ID，用于后续检查
+    const oldConversationId = currentConversationId
+
     // 如果正在加载中（流式响应进行中），取消当前的请求
+    // 注意：不重置isLoading状态，让后端继续保存已接收的内容
+    // 切换到新对话后，会加载新对话的消息，不会影响旧对话的保存
     if (isLoading) {
       // 取消流式响应读取器
       if (readerRef.current) {
@@ -248,12 +253,11 @@ function App() {
         abortControllerRef.current.abort()
         abortControllerRef.current = null
       }
-      // 重置加载状态
-      setIsLoading(false)
+      // 注意：不重置isLoading状态，让后端继续处理
+      // 切换对话后，isLoading状态会被新对话的状态覆盖
     }
 
     // 在切换对话前，检查旧对话是否需要自动命名
-    const oldConversationId = currentConversationId
     if (oldConversationId) {
       const oldConversation = conversations.find(c => c.id === oldConversationId)
       if (oldConversation && oldConversation.title === '新对话') {
@@ -350,8 +354,74 @@ function App() {
       setMessages(conversationMessages)
       setIsHistoryView(true) // 加载历史对话后，设置为历史视图（不使用打字机效果）
       
+      // 重置加载状态（切换对话时，无论之前是否在加载，都应该重置）
+      setIsLoading(false)
+      
       // 判断是否还有更多文档（如果返回的文档数量等于limit，说明可能还有更多）
       setHasMoreMessages(documentIDs.length >= 10)
+      
+      // 如果切换回的是之前正在生成响应的对话，延迟重新加载以确保获取最新保存的内容
+      // 因为后端可能在切换对话时还在保存流式响应的剩余内容
+      if (oldConversationId && oldConversationId !== conversationId) {
+        // 延迟重新加载，确保后端有时间保存剩余内容
+        setTimeout(async () => {
+          // 只有在当前对话仍然是目标对话时才重新加载
+          if (currentConversationIdRef.current === conversationId) {
+            try {
+              // 重新获取文档ID列表
+              const refreshIdsResponse = await fetch(`/api/documents/ids?conversation_id=${conversationId}&limit=10`)
+              if (refreshIdsResponse.ok) {
+                const refreshIdsData = await refreshIdsResponse.json()
+                const refreshDocumentIDs = refreshIdsData.document_ids || []
+                
+                // 如果文档数量发生变化，说明有新的内容被保存，需要重新加载
+                if (refreshDocumentIDs.length !== documentIDs.length || 
+                    (refreshDocumentIDs.length > 0 && documentIDs.length > 0 && 
+                     refreshDocumentIDs[refreshDocumentIDs.length - 1] !== documentIDs[documentIDs.length - 1])) {
+                  // 重新加载文档
+                  const refreshDocumentPromises = refreshDocumentIDs.map(id =>
+                    fetch(`/api/documents/${id}`)
+                      .then(response => {
+                        if (!response.ok) {
+                          throw new Error(`Failed to get document ${id}`)
+                        }
+                        return response.json()
+                      })
+                      .catch(error => {
+                        console.error(`Error fetching document ${id}:`, error)
+                        return null
+                      })
+                  )
+                  
+                  const refreshDocumentResults = await Promise.all(refreshDocumentPromises)
+                  
+                  const refreshDocuments = refreshDocumentResults
+                    .filter(doc => doc !== null)
+                    .sort((a, b) => {
+                      const indexA = refreshDocumentIDs.indexOf(a.id)
+                      const indexB = refreshDocumentIDs.indexOf(b.id)
+                      return indexA - indexB
+                    })
+                  
+                  const refreshMessages = refreshDocuments.map((doc) => ({
+                    id: doc.id,
+                    role: doc.role,
+                    content: doc.content,
+                  }))
+                  
+                  // 只有在当前对话仍然是目标对话时才更新消息
+                  if (currentConversationIdRef.current === conversationId) {
+                    setMessages(refreshMessages)
+                    setHasMoreMessages(refreshDocumentIDs.length >= 10)
+                  }
+                }
+              }
+            } catch (error) {
+              console.error('Failed to refresh conversation:', error)
+            }
+          }
+        }, 1000) // 延迟1秒，确保后端有时间保存剩余内容
+      }
       
       // 触发滚动到底部，显示最新消息（最新的消息在列表底部）
       // 使用多重延迟确保DOM完全渲染后再滚动
