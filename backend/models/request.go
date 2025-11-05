@@ -36,3 +36,8 @@ type DocumentListResponse struct {
 	Documents []Document `json:"documents"`
 	Total     int        `json:"total"`
 }
+
+// CreateConversationWithTitleRequest 创建对话并生成标题的请求
+type CreateConversationWithTitleRequest struct {
+	UserInputs []string `json:"user_inputs" binding:"required"`
+}

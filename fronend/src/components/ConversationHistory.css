@@ -96,14 +96,27 @@
   cursor: pointer;
   transition: all 0.2s ease;
   background-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .conversation-item:hover {
   background-color: rgba(255, 255, 255, 0.05);
 }
 
+.conversation-item:hover .conversation-item-rename-btn {
+  opacity: 1;
+}
+
 .conversation-item.active {
   background-color: rgba(255, 255, 255, 0.08);
+}
+
+.conversation-item-content {
+  flex: 1;
+  min-width: 0;
 }
 
 .conversation-item-title {
@@ -119,6 +132,48 @@
 .conversation-item-time {
   color: rgba(236, 236, 241, 0.5);
   font-size: 11px;
+}
+
+.conversation-item-rename-btn {
+  background: transparent;
+  border: none;
+  color: rgba(236, 236, 241, 0.5);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.conversation-item-rename-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ececf1;
+}
+
+.conversation-item-edit {
+  flex: 1;
+  width: 100%;
+}
+
+.conversation-item-edit-input {
+  width: 100%;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: #ececf1;
+  font-size: 14px;
+  padding: 8px 12px;
+  outline: none;
+  font-family: inherit;
+}
+
+.conversation-item-edit-input:focus {
+  border-color: rgba(255, 255, 255, 0.3);
+  background-color: rgba(255, 255, 255, 0.15);
 }
 
 .conversation-history-list::-webkit-scrollbar {

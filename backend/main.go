@@ -63,7 +63,16 @@ func main() {
 			AnthropicBaseURL: cfg.AnthropicBaseURL,
 		},
 	)
-	conversationListSvc := conversationListService.NewConversationListService(conversationRepo)
+	conversationListSvc := conversationListService.NewConversationListService(
+		conversationRepo,
+		&conversationListService.TitleGenerationConfig{
+			OpenAIAPIKey:     cfg.OpenAIAPIKey,
+			OpenAIBaseURL:    cfg.OpenAIBaseURL,
+			AnthropicAPIKey:  cfg.AnthropicAPIKey,
+			AnthropicBaseURL: cfg.AnthropicBaseURL,
+			DefaultModel:     "openai", // 默认使用openai生成标题
+		},
+	)
 	documentSvc := documentService.NewDocumentService(documentRepo)
 	conversationSvc := conversationService.NewConversationService(conversationRepo, documentRepo)
 
@@ -82,6 +91,7 @@ func main() {
 		// 对话列表模块
 		api.GET("/conversations", conversationListHdlr.GetConversationList)
 		api.POST("/conversations/new", conversationListHdlr.CreateNewConversation)
+		api.POST("/conversations/new-with-title", conversationListHdlr.CreateNewConversationWithTitle)
 
 		// 对话管理模块
 		api.GET("/conversations/:id", conversationHdlr.GetConversationByID)
