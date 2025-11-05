@@ -92,6 +92,7 @@ func main() {
 		api.GET("/conversations", conversationListHdlr.GetConversationList)
 		api.POST("/conversations/new", conversationListHdlr.CreateNewConversation)
 		api.POST("/conversations/new-with-title", conversationListHdlr.CreateNewConversationWithTitle)
+		api.POST("/conversations/generate-title", conversationListHdlr.GenerateTitle)
 
 		// 对话管理模块
 		api.GET("/conversations/:id", conversationHdlr.GetConversationByID)
@@ -102,6 +103,8 @@ func main() {
 
 		// 文档管理模块
 		api.GET("/documents", documentHdlr.GetDocumentList)
+		api.GET("/documents/ids", documentHdlr.GetDocumentIDs)
+		api.POST("/documents/by-ids", documentHdlr.GetDocumentsByIDs)
 		api.GET("/documents/:id", documentHdlr.GetDocumentByID)
 		api.PUT("/documents/:id", documentHdlr.UpdateDocument)
 		api.DELETE("/documents/:id", documentHdlr.DeleteDocument)

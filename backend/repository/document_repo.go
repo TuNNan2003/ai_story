@@ -45,6 +45,49 @@ func (r *DocumentRepository) GetByConversationID(conversationID string) ([]model
 	return documents, nil
 }
 
+// GetDocumentIDsByConversationID 根据对话ID获取文档ID列表（用于翻页）
+// beforeDocumentID: 如果提供，返回比该文档更早的文档ID
+// limit: 返回的最大数量
+func (r *DocumentRepository) GetDocumentIDsByConversationID(conversationID string, beforeDocumentID string, limit int) ([]string, error) {
+	var documentIDs []string
+	query := r.db.Model(&models.Document{}).
+		Where("conversation_id = ?", conversationID).
+		Order("created_at ASC")
+
+	if beforeDocumentID != "" {
+		// 找到 beforeDocumentID 对应的文档的 created_at
+		var beforeDoc models.Document
+		if err := r.db.Where("id = ?", beforeDocumentID).First(&beforeDoc).Error; err == nil {
+			query = query.Where("created_at < ?", beforeDoc.CreatedAt)
+		}
+	}
+
+	if limit <= 0 {
+		limit = 10
+	}
+
+	err := query.Limit(limit).Pluck("id", &documentIDs).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return documentIDs, nil
+}
+
+// GetLatestDocumentsByConversationID 获取对话的最新文档（按created_at倒序）
+func (r *DocumentRepository) GetLatestDocumentsByConversationID(conversationID string, limit int) ([]models.Document, error) {
+	var documents []models.Document
+	query := r.db.Where("conversation_id = ?", conversationID).Order("created_at DESC")
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+	err := query.Find(&documents).Error
+	if err != nil {
+		return nil, err
+	}
+	return documents, nil
+}
+
 // Update 更新文档
 func (r *DocumentRepository) Update(document *models.Document) error {
 	document.UpdatedAt = time.Now()

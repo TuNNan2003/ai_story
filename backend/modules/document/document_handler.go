@@ -18,7 +18,7 @@ func NewDocumentHandler(service *DocumentService) *DocumentHandler {
 	}
 }
 
-// GetDocumentList 获取文档列表
+// GetDocumentList 获取文档列表（支持翻页）
 func (h *DocumentHandler) GetDocumentList(c *gin.Context) {
 	fmt.Println("[document_handler GetDocumentList] Start")
 	var req models.DocumentListRequest
@@ -28,7 +28,12 @@ func (h *DocumentHandler) GetDocumentList(c *gin.Context) {
 		return
 	}
 
-	response, err := h.service.GetDocumentList(req.ConversationID)
+	limit := req.Limit
+	if limit <= 0 {
+		limit = 10 // 默认10个
+	}
+
+	response, err := h.service.GetDocumentList(req.ConversationID, req.BeforeID, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -79,4 +84,48 @@ func (h *DocumentHandler) DeleteDocument(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Document deleted successfully"})
+}
+
+// GetDocumentIDs 获取文档ID列表（用于翻页）
+func (h *DocumentHandler) GetDocumentIDs(c *gin.Context) {
+	var req models.DocumentIDsRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	limit := req.Limit
+	if limit <= 0 {
+		limit = 10
+	}
+
+	documentIDs, err := h.service.GetDocumentIDsByConversationID(req.ConversationID, req.BeforeID, limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.DocumentIDsResponse{
+		DocumentIDs: documentIDs,
+	})
+}
+
+// GetDocumentsByIDs 根据文档ID列表批量获取文档
+func (h *DocumentHandler) GetDocumentsByIDs(c *gin.Context) {
+	var req models.GetDocumentsByIDsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	documents, err := h.service.GetDocumentsByIDs(req.DocumentIDs)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.DocumentListResponse{
+		Documents: documents,
+		Total:     len(documents),
+	})
 }

@@ -106,9 +106,6 @@
   background-color: rgba(255, 255, 255, 0.05);
 }
 
-.conversation-item:hover .conversation-item-rename-btn {
-  opacity: 1;
-}
 
 .conversation-item.active {
   background-color: rgba(255, 255, 255, 0.08);
@@ -134,7 +131,20 @@
   font-size: 11px;
 }
 
-.conversation-item-rename-btn {
+.conversation-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.conversation-item:hover .conversation-item-actions {
+  opacity: 1;
+}
+
+.conversation-item-rename-btn,
+.conversation-item-delete-btn {
   background: transparent;
   border: none;
   color: rgba(236, 236, 241, 0.5);
@@ -144,7 +154,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
   transition: all 0.2s ease;
   flex-shrink: 0;
 }
@@ -152,6 +161,11 @@
 .conversation-item-rename-btn:hover {
   background-color: rgba(255, 255, 255, 0.1);
   color: #ececf1;
+}
+
+.conversation-item-delete-btn:hover {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
 }
 
 .conversation-item-edit {

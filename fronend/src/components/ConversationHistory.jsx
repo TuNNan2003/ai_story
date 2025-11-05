@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import './ConversationHistory.css'
 
-function ConversationHistory({ conversations, currentConversationId, onSelectConversation, isCollapsed, onToggleCollapse, onRenameConversation }) {
+function ConversationHistory({ conversations, currentConversationId, onSelectConversation, isCollapsed, onToggleCollapse, onRenameConversation, onDeleteConversation }) {
   const [editingId, setEditingId] = useState(null)
   const [editTitle, setEditTitle] = useState('')
 
@@ -88,21 +88,43 @@ function ConversationHistory({ conversations, currentConversationId, onSelectCon
                           {new Date(conv.updated_at).toLocaleDateString('zh-CN')}
                         </div>
                       </div>
-                      <button
-                        className="conversation-item-rename-btn"
-                        onClick={(e) => handleRenameClick(e, conv)}
-                        title="重命名"
-                      >
-                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                          <path
-                            d="M11.333 2.667a1.414 1.414 0 0 1 2 2L5.333 12l-2.666.667L3.333 10l8-8z"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      </button>
+                      <div className="conversation-item-actions">
+                        <button
+                          className="conversation-item-rename-btn"
+                          onClick={(e) => handleRenameClick(e, conv)}
+                          title="重命名"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                            <path
+                              d="M11.333 2.667a1.414 1.414 0 0 1 2 2L5.333 12l-2.666.667L3.333 10l8-8z"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </button>
+                        <button
+                          className="conversation-item-delete-btn"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (window.confirm('确定要删除这个对话吗？')) {
+                              onDeleteConversation(conv.id)
+                            }
+                          }}
+                          title="删除"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                            <path
+                              d="M4 4l8 8M12 4l-8 8"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </button>
+                      </div>
                     </>
                   )}
                 </div>

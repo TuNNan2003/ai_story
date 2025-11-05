@@ -29,6 +29,25 @@ type ConversationListResponse struct {
 // DocumentListRequest 文档列表请求
 type DocumentListRequest struct {
 	ConversationID string `json:"conversation_id" form:"conversation_id" binding:"required"`
+	BeforeID       string `json:"before_id" form:"before_id"` // 用于翻页，获取比该ID更早的文档
+	Limit          int    `json:"limit" form:"limit"`         // 返回数量，默认10
+}
+
+// DocumentIDsRequest 获取文档ID列表的请求
+type DocumentIDsRequest struct {
+	ConversationID string `json:"conversation_id" form:"conversation_id" binding:"required"`
+	BeforeID       string `json:"before_id" form:"before_id"` // 用于翻页，获取比该ID更早的文档ID
+	Limit          int    `json:"limit" form:"limit"`         // 返回数量，默认10
+}
+
+// DocumentIDsResponse 文档ID列表响应
+type DocumentIDsResponse struct {
+	DocumentIDs []string `json:"document_ids"`
+}
+
+// GetDocumentsByIDsRequest 根据ID列表获取文档的请求
+type GetDocumentsByIDsRequest struct {
+	DocumentIDs []string `json:"document_ids" binding:"required"`
 }
 
 // DocumentListResponse 文档列表响应

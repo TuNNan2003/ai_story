@@ -12,6 +12,8 @@ function App() {
   const [conversations, setConversations] = useState([])
   const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(false)
   const [isHistoryView, setIsHistoryView] = useState(false)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [hasMoreMessages, setHasMoreMessages] = useState(false)
 
   useEffect(() => {
     fetchModels()
@@ -43,29 +45,44 @@ function App() {
 
   const handleNewChat = async () => {
     try {
-      // 收集当前对话的所有用户输入
-      const userInputs = messages
-        .filter(msg => msg.role === 'user')
-        .map(msg => msg.content)
+      // 判断当前对话是否为默认标题，如果是则自动命名
+      if (currentConversationId && messages.length > 0) {
+        const currentConversation = conversations.find(c => c.id === currentConversationId)
+        if (currentConversation && currentConversation.title === '新对话') {
+          // 收集当前对话的所有用户输入
+          const userInputs = messages
+            .filter(msg => msg.role === 'user')
+            .map(msg => msg.content)
 
-      let response
-      if (userInputs.length > 0) {
-        // 如果有用户输入，发送给后端生成标题
-        response = await fetch('/api/conversations/new-with-title', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            user_inputs: userInputs,
-          }),
-        })
-      } else {
-        // 如果没有用户输入，直接创建新对话
-        response = await fetch('/api/conversations/new', {
-          method: 'POST',
-        })
+          if (userInputs.length > 0) {
+            try {
+              // 调用智能命名接口生成标题
+              const titleResponse = await fetch('/api/conversations/generate-title', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  user_inputs: userInputs,
+                }),
+              })
+
+              if (titleResponse.ok) {
+                const titleData = await titleResponse.json()
+                // 使用生成的标题重命名旧对话
+                await handleRenameConversation(currentConversationId, titleData.title)
+              }
+            } catch (error) {
+              console.error('Failed to generate title for old conversation:', error)
+            }
+          }
+        }
       }
+
+      // 创建新对话
+      const response = await fetch('/api/conversations/new', {
+        method: 'POST',
+      })
 
       if (response.ok) {
         const data = await response.json()
@@ -98,11 +115,30 @@ function App() {
     }
   }
 
+  const handleDeleteConversation = async (conversationId) => {
+    try {
+      const response = await fetch(`/api/conversations/${conversationId}`, {
+        method: 'DELETE',
+      })
+      if (response.ok) {
+        // 如果删除的是当前对话，清空消息并重置
+        if (conversationId === currentConversationId) {
+          setCurrentConversationId(null)
+          setMessages([])
+          setIsHistoryView(false)
+        }
+        fetchConversations() // 刷新对话列表
+      }
+    } catch (error) {
+      console.error('Failed to delete conversation:', error)
+    }
+  }
+
   const handleSelectConversation = async (conversationId) => {
     setCurrentConversationId(conversationId)
     try {
-      // 获取对话的文档列表
-      const response = await fetch(`/api/documents?conversation_id=${conversationId}`)
+      // 获取对话的文档列表（初始加载最新的10个文档）
+      const response = await fetch(`/api/documents?conversation_id=${conversationId}&limit=10`)
       if (response.ok) {
         const data = await response.json()
         // 按照 created_at 排序（后端已经按 created_at ASC 排序）
@@ -113,9 +149,71 @@ function App() {
         }))
         setMessages(conversationMessages)
         setIsHistoryView(true) // 加载历史对话后，设置为历史视图
+        // 如果返回的文档数量等于limit，说明可能还有更多文档
+        setHasMoreMessages(data.documents.length >= 10)
       }
     } catch (error) {
       console.error('Failed to load conversation:', error)
+    }
+  }
+
+  // 加载更早的文档（翻页功能）
+  const loadOlderMessages = async () => {
+    if (messages.length === 0 || !currentConversationId || isLoadingMore) return
+
+    // 获取当前页面最早的文档ID
+    const earliestDocId = messages[0].id
+
+    setIsLoadingMore(true)
+    try {
+      // 第一步：获取比earliestDocId更早的文档ID列表
+      const idsResponse = await fetch(
+        `/api/documents/ids?conversation_id=${currentConversationId}&before_id=${earliestDocId}&limit=10`
+      )
+
+      if (!idsResponse.ok) {
+        throw new Error('Failed to get document IDs')
+      }
+
+      const idsData = await idsResponse.json()
+      if (idsData.document_ids.length === 0) {
+        setHasMoreMessages(false) // 没有更多文档了
+        return
+      }
+
+      // 第二步：并发请求获取这些文档的内容
+      const documentsResponse = await fetch('/api/documents/by-ids', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          document_ids: idsData.document_ids,
+        }),
+      })
+
+      if (!documentsResponse.ok) {
+        throw new Error('Failed to get documents')
+      }
+
+      const documentsData = await documentsResponse.json()
+      const olderMessages = documentsData.documents.map((doc) => ({
+        id: doc.id,
+        role: doc.role,
+        content: doc.content,
+      }))
+
+      // 将更早的消息插入到列表前面（按顺序渲染）
+      setMessages((prev) => [...olderMessages, ...prev])
+      
+      // 如果返回的文档数量小于limit，说明没有更多了
+      if (idsData.document_ids.length < 10) {
+        setHasMoreMessages(false)
+      }
+    } catch (error) {
+      console.error('Failed to load older messages:', error)
+    } finally {
+      setIsLoadingMore(false)
     }
   }
 
@@ -245,6 +343,7 @@ function App() {
         isCollapsed={isHistoryCollapsed}
         onToggleCollapse={() => setIsHistoryCollapsed(!isHistoryCollapsed)}
         onRenameConversation={handleRenameConversation}
+        onDeleteConversation={handleDeleteConversation}
       />
       <div className="main-content">
         <div className="new-chat-button-container">
@@ -268,6 +367,9 @@ function App() {
           selectedModel={selectedModel}
           onModelChange={setSelectedModel}
           enableTypewriter={!isHistoryView}
+          onLoadMore={loadOlderMessages}
+          canLoadMore={isHistoryView && hasMoreMessages}
+          isLoadingMore={isLoadingMore}
         />
       </div>
     </div>

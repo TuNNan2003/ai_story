@@ -147,3 +147,8 @@ func (s *ConversationListService) generateTitle(userInputs []string) (string, er
 
 	return title, nil
 }
+
+// GenerateTitleForConversation 为对话生成标题（公开方法，用于智能命名接口）
+func (s *ConversationListService) GenerateTitleForConversation(userInputs []string) (string, error) {
+	return s.generateTitle(userInputs)
+}
