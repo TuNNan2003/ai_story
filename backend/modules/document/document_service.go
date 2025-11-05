@@ -39,20 +39,12 @@ func (s *DocumentService) GetDocumentList(conversationID string, beforeID string
 		}, nil
 	}
 
-	// 如果指定了beforeID，获取比该ID更早的文档
-	documentIDs, err := s.documentRepo.GetDocumentIDsByConversationID(conversationID, beforeID, limit)
-	if err != nil {
-		return nil, err
-	}
-
-	documents, err := s.GetDocumentsByIDs(documentIDs)
-	if err != nil {
-		return nil, err
-	}
-
+	// 如果指定了beforeID，不应该使用这个方法，应该使用 /api/documents/ids 获取ID列表
+	// 然后前端并发请求每个文档
+	// 这里返回空列表，表示不支持此路径
 	return &models.DocumentListResponse{
-		Documents: documents,
-		Total:     len(documents),
+		Documents: []models.Document{},
+		Total:     0,
 	}, nil
 }
 
@@ -90,22 +82,4 @@ func (s *DocumentService) CreateDocument(conversationID, role, content, model st
 // GetDocumentIDsByConversationID 获取对话的文档ID列表（用于翻页）
 func (s *DocumentService) GetDocumentIDsByConversationID(conversationID string, beforeDocumentID string, limit int) ([]string, error) {
 	return s.documentRepo.GetDocumentIDsByConversationID(conversationID, beforeDocumentID, limit)
-}
-
-// GetDocumentsByIDs 根据文档ID列表批量获取文档
-func (s *DocumentService) GetDocumentsByIDs(documentIDs []string) ([]models.Document, error) {
-	if len(documentIDs) == 0 {
-		return []models.Document{}, nil
-	}
-
-	var documents []models.Document
-	for _, id := range documentIDs {
-		doc, err := s.documentRepo.GetByID(id)
-		if err != nil {
-			continue // 跳过找不到的文档
-		}
-		documents = append(documents, *doc)
-	}
-
-	return documents, nil
 }

@@ -45,11 +45,6 @@ type DocumentIDsResponse struct {
 	DocumentIDs []string `json:"document_ids"`
 }
 
-// GetDocumentsByIDsRequest 根据ID列表获取文档的请求
-type GetDocumentsByIDsRequest struct {
-	DocumentIDs []string `json:"document_ids" binding:"required"`
-}
-
 // DocumentListResponse 文档列表响应
 type DocumentListResponse struct {
 	Documents []Document `json:"documents"`

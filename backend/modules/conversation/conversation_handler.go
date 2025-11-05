@@ -23,6 +23,7 @@ func (h *ConversationHandler) GetConversationByID(c *gin.Context) {
 	fmt.Println("[conversation_handler GetConversationByID] Start")
 	id := c.Param("id")
 	conv, err := h.service.GetConversationByID(id)
+	fmt.Printf("[conversation_handler GetConversationByID] conversationID:%v conversationInfo:%v\n", id, conv)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Conversation not found"})
 		return

@@ -10,13 +10,18 @@ function MessageList({ messages, isLoading, enableTypewriter = true, onLoadMore,
     <div className="message-list">
       {canLoadMore && (
         <div className="load-more-container">
-          <button
-            className="load-more-button"
-            onClick={onLoadMore}
-            disabled={isLoadingMore}
-          >
-            {isLoadingMore ? '加载中...' : '加载更早的消息'}
-          </button>
+          {isLoadingMore ? (
+            <div className="load-more-indicator">
+              <div className="load-more-spinner">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+              <span className="load-more-text">加载中...</span>
+            </div>
+          ) : (
+            <div className="load-more-hint">向上滚动加载更多</div>
+          )}
         </div>
       )}
       {messages.map((message) => (

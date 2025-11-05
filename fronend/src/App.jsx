@@ -14,6 +14,7 @@ function App() {
   const [isHistoryView, setIsHistoryView] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [hasMoreMessages, setHasMoreMessages] = useState(false)
+  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false)
   const [historyWidth, setHistoryWidth] = useState(() => {
     // 从localStorage读取保存的宽度，默认260px
     const saved = localStorage.getItem('conversationHistoryWidth')
@@ -140,25 +141,92 @@ function App() {
   }
 
   const handleSelectConversation = async (conversationId) => {
+    // 如果点击的是当前对话，不发起请求
+    if (conversationId === currentConversationId) {
+      return
+    }
+
     setCurrentConversationId(conversationId)
+    
+    // 清空之前的消息，避免显示旧数据
+    setMessages([])
+    
     try {
-      // 获取对话的文档列表（初始加载最新的10个文档）
-      const response = await fetch(`/api/documents?conversation_id=${conversationId}&limit=10`)
-      if (response.ok) {
-        const data = await response.json()
-        // 按照 created_at 排序（后端已经按 created_at ASC 排序）
-        const conversationMessages = data.documents.map((doc) => ({
-          id: doc.id,
-          role: doc.role,
-          content: doc.content,
-        }))
-        setMessages(conversationMessages)
-        setIsHistoryView(true) // 加载历史对话后，设置为历史视图
-        // 如果返回的文档数量等于limit，说明可能还有更多文档
-        setHasMoreMessages(data.documents.length >= 10)
+      // 第一步：请求文档ID列表接口，获取这个对话的最新10个文档的ID
+      // 后端返回的ID列表已经按时间正序排列（最早的在前，最新的在后）
+      const idsResponse = await fetch(`/api/documents/ids?conversation_id=${conversationId}&limit=10`)
+      if (!idsResponse.ok) {
+        throw new Error('Failed to get document IDs')
       }
+
+      const idsData = await idsResponse.json()
+      const documentIDs = idsData.document_ids || []
+
+      if (documentIDs.length === 0) {
+        setMessages([])
+        setIsHistoryView(true)
+        setHasMoreMessages(false)
+        return
+      }
+
+      // 第二步：并发请求文档管理模块，同时发送多个请求，每个请求获取一个文档的详细信息
+      // 注意：这里只获取最新10条文档，不会获取全部对话
+      const documentPromises = documentIDs.map(id =>
+        fetch(`/api/documents/${id}`)
+          .then(response => {
+            if (!response.ok) {
+              throw new Error(`Failed to get document ${id}`)
+            }
+            return response.json()
+          })
+          .catch(error => {
+            console.error(`Error fetching document ${id}:`, error)
+            return null
+          })
+      )
+
+      const documentResults = await Promise.all(documentPromises)
+      
+      // 过滤掉失败的结果，并按ID顺序排序（保持时间顺序）
+      // documentIDs已经按时间正序排列（最早的在前），所以documents也需要按此顺序排列
+      const documents = documentResults
+        .filter(doc => doc !== null)
+        .sort((a, b) => {
+          // 按照documentIDs的顺序排序，确保时间顺序正确
+          const indexA = documentIDs.indexOf(a.id)
+          const indexB = documentIDs.indexOf(b.id)
+          return indexA - indexB
+        })
+
+      // 转换为消息格式
+      // 消息列表顺序：最早的在前（顶部），最新的在后（底部）
+      const conversationMessages = documents.map((doc) => ({
+        id: doc.id,
+        role: doc.role,
+        content: doc.content,
+      }))
+
+      // 设置消息（只显示最新10条）
+      setMessages(conversationMessages)
+      setIsHistoryView(true) // 加载历史对话后，设置为历史视图（不使用打字机效果）
+      
+      // 判断是否还有更多文档（如果返回的文档数量等于limit，说明可能还有更多）
+      setHasMoreMessages(documentIDs.length >= 10)
+      
+      // 触发滚动到底部，显示最新消息（最新的消息在列表底部）
+      // 使用多重延迟确保DOM完全渲染后再滚动
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          setShouldScrollToBottom(true)
+          // 再次延迟重置标志，确保滚动完成
+          setTimeout(() => {
+            setShouldScrollToBottom(false)
+          }, 300)
+        }, 150)
+      })
     } catch (error) {
       console.error('Failed to load conversation:', error)
+      setMessages([]) // 出错时清空消息
     }
   }
 
@@ -186,23 +254,34 @@ function App() {
         return
       }
 
-      // 第二步：并发请求获取这些文档的内容
-      const documentsResponse = await fetch('/api/documents/by-ids', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          document_ids: idsData.document_ids,
-        }),
-      })
+      // 第二步：并发请求文档管理模块，同时发送多个请求，每个请求获取一个文档的详细信息
+      const documentPromises = idsData.document_ids.map(id =>
+        fetch(`/api/documents/${id}`)
+          .then(response => {
+            if (!response.ok) {
+              throw new Error(`Failed to get document ${id}`)
+            }
+            return response.json()
+          })
+          .catch(error => {
+            console.error(`Error fetching document ${id}:`, error)
+            return null
+          })
+      )
 
-      if (!documentsResponse.ok) {
-        throw new Error('Failed to get documents')
-      }
+      const documentResults = await Promise.all(documentPromises)
+      
+      // 过滤掉失败的结果，并按ID顺序排序（保持时间顺序）
+      const documents = documentResults
+        .filter(doc => doc !== null)
+        .sort((a, b) => {
+          // 按照documentIDs的顺序排序
+          const indexA = idsData.document_ids.indexOf(a.id)
+          const indexB = idsData.document_ids.indexOf(b.id)
+          return indexA - indexB
+        })
 
-      const documentsData = await documentsResponse.json()
-      const olderMessages = documentsData.documents.map((doc) => ({
+      const olderMessages = documents.map((doc) => ({
         id: doc.id,
         role: doc.role,
         content: doc.content,
@@ -380,6 +459,7 @@ function App() {
           onLoadMore={loadOlderMessages}
           canLoadMore={isHistoryView && hasMoreMessages}
           isLoadingMore={isLoadingMore}
+          shouldScrollToBottom={shouldScrollToBottom}
         />
       </div>
     </div>
