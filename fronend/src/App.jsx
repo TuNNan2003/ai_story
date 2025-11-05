@@ -14,6 +14,11 @@ function App() {
   const [isHistoryView, setIsHistoryView] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [hasMoreMessages, setHasMoreMessages] = useState(false)
+  const [historyWidth, setHistoryWidth] = useState(() => {
+    // 从localStorage读取保存的宽度，默认260px
+    const saved = localStorage.getItem('conversationHistoryWidth')
+    return saved ? parseInt(saved, 10) : 260
+  })
 
   useEffect(() => {
     fetchModels()
@@ -344,6 +349,11 @@ function App() {
         onToggleCollapse={() => setIsHistoryCollapsed(!isHistoryCollapsed)}
         onRenameConversation={handleRenameConversation}
         onDeleteConversation={handleDeleteConversation}
+        width={historyWidth}
+        onWidthChange={(newWidth) => {
+          setHistoryWidth(newWidth)
+          localStorage.setItem('conversationHistoryWidth', newWidth.toString())
+        }}
       />
       <div className="main-content">
         <div className="new-chat-button-container">

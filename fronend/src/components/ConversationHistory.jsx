@@ -1,9 +1,49 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import DeleteConfirmDialog from './DeleteConfirmDialog'
 import './ConversationHistory.css'
 
-function ConversationHistory({ conversations, currentConversationId, onSelectConversation, isCollapsed, onToggleCollapse, onRenameConversation, onDeleteConversation }) {
+function ConversationHistory({ conversations, currentConversationId, onSelectConversation, isCollapsed, onToggleCollapse, onRenameConversation, onDeleteConversation, width, onWidthChange }) {
   const [editingId, setEditingId] = useState(null)
   const [editTitle, setEditTitle] = useState('')
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteTargetId, setDeleteTargetId] = useState(null)
+  const [deleteTargetTitle, setDeleteTargetTitle] = useState('')
+  const [isResizing, setIsResizing] = useState(false)
+  const resizeRef = useRef(null)
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (isResizing && resizeRef.current) {
+        const newWidth = e.clientX
+        if (newWidth >= 200 && newWidth <= 500) {
+          onWidthChange(newWidth)
+        }
+      }
+    }
+
+    const handleMouseUp = () => {
+      setIsResizing(false)
+    }
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = 'col-resize'
+      document.body.style.userSelect = 'none'
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+  }, [isResizing, onWidthChange])
+
+  const handleResizeStart = (e) => {
+    e.preventDefault()
+    setIsResizing(true)
+  }
 
   const handleRenameClick = (e, conversation) => {
     e.stopPropagation()
@@ -36,7 +76,10 @@ function ConversationHistory({ conversations, currentConversationId, onSelectCon
 
   return (
     <>
-      <div className={`conversation-history ${isCollapsed ? 'collapsed' : ''}`}>
+      <div
+        className={`conversation-history ${isCollapsed ? 'collapsed' : ''}`}
+        style={!isCollapsed && width ? { width: `${width}px` } : {}}
+      >
         <div className="conversation-history-header" onClick={onToggleCollapse}>
           <span className="conversation-history-title">历史对话</span>
           <svg
@@ -83,7 +126,7 @@ function ConversationHistory({ conversations, currentConversationId, onSelectCon
                   ) : (
                     <>
                       <div className="conversation-item-content">
-                        <div className="conversation-item-title">{conv.title}</div>
+                        <div className="conversation-item-title" title={conv.title}>{conv.title}</div>
                         <div className="conversation-item-time">
                           {new Date(conv.updated_at).toLocaleDateString('zh-CN')}
                         </div>
@@ -108,8 +151,14 @@ function ConversationHistory({ conversations, currentConversationId, onSelectCon
                           className="conversation-item-delete-btn"
                           onClick={(e) => {
                             e.stopPropagation()
-                            if (window.confirm('确定要删除这个对话吗？')) {
+                            // 检查localStorage中是否设置了不再提醒
+                            const dontShowAgain = localStorage.getItem('dontShowDeleteConfirm') === 'true'
+                            if (dontShowAgain) {
                               onDeleteConversation(conv.id)
+                            } else {
+                              setDeleteTargetId(conv.id)
+                              setDeleteTargetTitle(conv.title)
+                              setDeleteDialogOpen(true)
                             }
                           }}
                           title="删除"
@@ -132,6 +181,13 @@ function ConversationHistory({ conversations, currentConversationId, onSelectCon
             )}
           </div>
         )}
+        {!isCollapsed && (
+          <div
+            ref={resizeRef}
+            className="conversation-history-resizer"
+            onMouseDown={handleResizeStart}
+          />
+        )}
       </div>
       {isCollapsed && (
         <div className="conversation-history-sidebar" onClick={onToggleCollapse}>
@@ -152,6 +208,23 @@ function ConversationHistory({ conversations, currentConversationId, onSelectCon
           </svg>
         </div>
       )}
+      <DeleteConfirmDialog
+        isOpen={deleteDialogOpen}
+        onConfirm={() => {
+          if (deleteTargetId) {
+            onDeleteConversation(deleteTargetId)
+          }
+          setDeleteDialogOpen(false)
+          setDeleteTargetId(null)
+          setDeleteTargetTitle('')
+        }}
+        onCancel={() => {
+          setDeleteDialogOpen(false)
+          setDeleteTargetId(null)
+          setDeleteTargetTitle('')
+        }}
+        conversationTitle={deleteTargetTitle}
+      />
     </>
   )
 }

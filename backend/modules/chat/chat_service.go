@@ -60,10 +60,15 @@ func (s *ChatService) SendMessage(req *models.ChatRequest, writer io.Writer) (st
 	var apiMessages []models.Message
 
 	// 如果提供了对话ID，从数据库加载历史消息
+	// 优化：只加载最近的对话上下文，而不是全部历史
 	if req.ConversationID != "" {
-		// 获取对话的历史文档
-		historyDocs, err := s.documentRepo.GetByConversationID(conversationID)
+		// 获取对话的历史文档（只获取最近的20条，避免上下文过长）
+		historyDocs, err := s.documentRepo.GetLatestDocumentsByConversationID(conversationID, 20)
 		if err == nil && len(historyDocs) > 0 {
+			// 反转顺序，使其按时间正序排列（最新的在最后）
+			for i, j := 0, len(historyDocs)-1; i < j; i, j = i+1, j-1 {
+				historyDocs[i], historyDocs[j] = historyDocs[j], historyDocs[i]
+			}
 			// 将历史文档转换为消息格式
 			for _, doc := range historyDocs {
 				apiMessages = append(apiMessages, models.Message{

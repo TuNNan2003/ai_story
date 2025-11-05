@@ -5,8 +5,9 @@
   width: 260px;
   display: flex;
   flex-direction: column;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: border-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
+  position: relative;
 }
 
 .conversation-history.collapsed {
@@ -124,6 +125,11 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   line-height: 1.4;
+  cursor: default;
+}
+
+.conversation-item-title:hover {
+  color: #ffffff;
 }
 
 .conversation-item-time {
@@ -171,6 +177,26 @@
 .conversation-item-edit {
   flex: 1;
   width: 100%;
+}
+
+.conversation-history-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  background-color: transparent;
+  transition: background-color 0.2s ease;
+  z-index: 10;
+}
+
+.conversation-history-resizer:hover {
+  background-color: rgba(59, 130, 246, 0.5);
+}
+
+.conversation-history-resizer:active {
+  background-color: rgba(59, 130, 246, 0.8);
 }
 
 .conversation-item-edit-input {
