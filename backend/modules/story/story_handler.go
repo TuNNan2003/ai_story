@@ -70,7 +70,7 @@ func (h *StoryHandler) CreateStory(c *gin.Context) {
 	c.JSON(http.StatusOK, story)
 }
 
-// DeleteStory 删除文档
+// DeleteStory 删除故事
 func (h *StoryHandler) DeleteStory(c *gin.Context) {
 	fmt.Println("[story_handler DeleteStory] Start")
 	id := c.Param("id")
@@ -81,4 +81,40 @@ func (h *StoryHandler) DeleteStory(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Story deleted successfully"})
+}
+
+// UpdateStory 更新故事
+func (h *StoryHandler) UpdateStory(c *gin.Context) {
+	fmt.Println("[story_handler UpdateStory] Start")
+	id := c.Param("id")
+
+	var req models.StoryRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fmt.Printf("[Story_handler UpdateStory] Error: %+v\n", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 验证必需字段
+	if req.Content == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "content is required"})
+		return
+	}
+
+	story, err := h.service.UpdateStory(id, req.Title, req.Content, req.ContentHash)
+	if err != nil {
+		// 根据错误类型返回不同的状态码
+		if err.Error() == "duplicate_story" {
+			c.JSON(http.StatusConflict, gin.H{"error": "duplicate_story"})
+			return
+		}
+		if err.Error() == "hash_mismatch" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "hash_mismatch"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, story)
 }

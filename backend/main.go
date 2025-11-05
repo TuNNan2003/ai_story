@@ -114,6 +114,7 @@ func main() {
 
 		api.GET("/stories", storiesHdlr.GetStoryList)
 		api.POST("/stories", storiesHdlr.CreateStory)
+		api.PUT("/stories/:id", storiesHdlr.UpdateStory)
 		api.DELETE("/stories/:id", storiesHdlr.DeleteStory)
 
 		// 获取可用模型列表

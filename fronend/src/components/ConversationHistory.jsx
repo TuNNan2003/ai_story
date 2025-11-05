@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import DeleteConfirmDialog from './DeleteConfirmDialog'
 import './ConversationHistory.css'
 
-function ConversationHistory({ conversations, currentConversationId, onSelectConversation, isCollapsed, onToggleCollapse, onRenameConversation, onDeleteConversation, width, onWidthChange, stories, onSelectStory }) {
+function ConversationHistory({ conversations, currentConversationId, onSelectConversation, isCollapsed, onToggleCollapse, onRenameConversation, onDeleteConversation, width, onWidthChange, stories, onSelectStory, onEditStory, onDeleteStory }) {
   const [editingId, setEditingId] = useState(null)
   const [editTitle, setEditTitle] = useState('')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -193,13 +193,53 @@ function ConversationHistory({ conversations, currentConversationId, onSelectCon
                     <div
                       key={story.id}
                       className="story-item"
-                      onClick={() => onSelectStory && onSelectStory(story)}
                     >
-                      <div className="story-item-content">
+                      <div 
+                        className="story-item-content"
+                        onClick={() => onSelectStory && onSelectStory(story)}
+                      >
                         <div className="story-item-title" title={story.title}>{story.title || '未命名故事'}</div>
                         <div className="story-item-time">
                           {new Date(story.created_at).toLocaleDateString('zh-CN')}
                         </div>
+                      </div>
+                      <div className="story-item-actions">
+                        <button
+                          className="story-item-edit-btn"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onEditStory && onEditStory(story)
+                          }}
+                          title="修改"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                            <path
+                              d="M11.333 2.667a1.414 1.414 0 0 1 2 2L5.333 12l-2.666.667L3.333 10l8-8z"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </button>
+                        <button
+                          className="story-item-delete-btn"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onDeleteStory && onDeleteStory(story)
+                          }}
+                          title="删除"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                            <path
+                              d="M4 4l8 8M12 4l-8 8"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </button>
                       </div>
                     </div>
                   ))

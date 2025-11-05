@@ -279,6 +279,10 @@
   cursor: pointer;
   transition: all 0.2s ease;
   background-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .story-item:hover {
@@ -288,6 +292,43 @@
 .story-item-content {
   flex: 1;
   min-width: 0;
+  cursor: pointer;
+}
+
+.story-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.story-item:hover .story-item-actions {
+  opacity: 1;
+}
+
+.story-item-edit-btn,
+.story-item-delete-btn {
+  background: transparent;
+  border: none;
+  color: rgba(236, 236, 241, 0.6);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.story-item-edit-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: rgba(236, 236, 241, 0.9);
+}
+
+.story-item-delete-btn:hover {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
 }
 
 .story-item-title {

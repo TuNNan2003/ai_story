@@ -27,9 +27,10 @@
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
-  width: 90%;
-  max-width: 600px;
-  max-height: 80vh;
+  width: 70%;
+  max-width: 1200px;
+  max-height: 95vh;
+  height: 95vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
@@ -130,7 +131,7 @@
 
 .story-edit-dialog-textarea {
   resize: vertical;
-  min-height: 200px;
+  min-height: 600px;
   line-height: 1.6;
 }
 

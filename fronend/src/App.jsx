@@ -17,6 +17,7 @@ function App() {
   const [storyEditContent, setStoryEditContent] = useState('')
   const [storyEditTitle, setStoryEditTitle] = useState('')
   const [storyEditDocumentId, setStoryEditDocumentId] = useState(null)
+  const [storyEditStoryId, setStoryEditStoryId] = useState(null)
   const [isHistoryView, setIsHistoryView] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [hasMoreMessages, setHasMoreMessages] = useState(false)
@@ -584,10 +585,11 @@ function App() {
         title = '未命名故事'
       }
 
-      // 显示编辑对话框
+      // 显示编辑对话框（创建模式）
       setStoryEditContent(doc.content)
       setStoryEditTitle(title)
       setStoryEditDocumentId(documentId)
+      setStoryEditStoryId(null) // 创建模式，storyId为null
       setStoryEditDialogOpen(true)
     } catch (error) {
       console.error('Failed to add to story:', error)
@@ -599,19 +601,28 @@ function App() {
       // 计算内容特征值
       const contentHash = await calculateContentHash(content)
 
-      // 创建故事
-      const response = await fetch('/api/stories', {
-        method: 'POST',
+      // 判断是创建还是更新
+      const url = storyEditStoryId ? `/api/stories/${storyEditStoryId}` : '/api/stories'
+      const method = storyEditStoryId ? 'PUT' : 'POST'
+
+      const requestBody = {
+        title: title,
+        content: content,
+        content_hash: contentHash,
+      }
+
+      // 只有在创建时才需要document_id
+      if (!storyEditStoryId && storyEditDocumentId) {
+        requestBody.document_id = storyEditDocumentId
+        requestBody.guid = 'default'
+      }
+
+      const response = await fetch(url, {
+        method: method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          guid: 'default',
-          document_id: storyEditDocumentId,
-          title: title,
-          content: content,
-          content_hash: contentHash,
-        }),
+        body: JSON.stringify(requestBody),
       })
 
       const data = await response.json()
@@ -633,6 +644,38 @@ function App() {
     } catch (error) {
       console.error('Failed to save story:', error)
       throw error
+    }
+  }
+
+  const handleEditStory = async (story) => {
+    try {
+      // 设置编辑内容
+      setStoryEditContent(story.content || '')
+      setStoryEditTitle(story.title || '未命名故事')
+      setStoryEditStoryId(story.id)
+      setStoryEditDocumentId(null) // 编辑时不需要documentId
+      setStoryEditDialogOpen(true)
+    } catch (error) {
+      console.error('Failed to edit story:', error)
+    }
+  }
+
+  const handleDeleteStory = async (story) => {
+    try {
+      const response = await fetch(`/api/stories/${story.id}`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        // 刷新故事列表
+        await fetchStories()
+      } else {
+        const data = await response.json()
+        throw new Error(data.error || '删除失败')
+      }
+    } catch (error) {
+      console.error('Failed to delete story:', error)
+      alert('删除失败：' + error.message)
     }
   }
 
@@ -930,6 +973,8 @@ function App() {
         }}
         stories={stories}
         onSelectStory={handleSelectStory}
+        onEditStory={handleEditStory}
+        onDeleteStory={handleDeleteStory}
       />
       <div className="main-content">
         <div className="new-chat-button-container">
@@ -959,15 +1004,17 @@ function App() {
           shouldScrollToBottom={shouldScrollToBottom}
         />
       </div>
-      <StoryEditDialog
+        <StoryEditDialog
         isOpen={storyEditDialogOpen}
         content={storyEditContent}
         title={storyEditTitle}
+        storyId={storyEditStoryId}
         onClose={() => {
           setStoryEditDialogOpen(false)
           setStoryEditContent('')
           setStoryEditTitle('')
           setStoryEditDocumentId(null)
+          setStoryEditStoryId(null)
         }}
         onSave={handleSaveStory}
       />
