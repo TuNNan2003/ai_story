@@ -109,23 +109,3 @@ func (h *DocumentHandler) GetDocumentIDs(c *gin.Context) {
 		DocumentIDs: documentIDs,
 	})
 }
-
-// GetDocumentsByIDs 根据文档ID列表批量获取文档
-func (h *DocumentHandler) GetDocumentsByIDs(c *gin.Context) {
-	var req models.GetDocumentsByIDsRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	documents, err := h.service.GetDocumentsByIDs(req.DocumentIDs)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, models.DocumentListResponse{
-		Documents: documents,
-		Total:     len(documents),
-	})
-}

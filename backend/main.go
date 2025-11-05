@@ -108,7 +108,6 @@ func main() {
 		// 文档管理模块
 		api.GET("/documents", documentHdlr.GetDocumentList)
 		api.GET("/documents/ids", documentHdlr.GetDocumentIDs)
-		api.POST("/documents/by-ids", documentHdlr.GetDocumentsByIDs)
 		api.GET("/documents/:id", documentHdlr.GetDocumentByID)
 		api.PUT("/documents/:id", documentHdlr.UpdateDocument)
 		api.DELETE("/documents/:id", documentHdlr.DeleteDocument)
