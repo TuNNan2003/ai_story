@@ -17,6 +17,10 @@ func GenerateDocumentID() string {
 	return generateID("doc")
 }
 
+func GenerateStoryId() string {
+	return generateID("story")
+}
+
 // generateID 生成唯一ID
 func generateID(prefix string) string {
 	timestamp := time.Now().UnixNano()
@@ -25,4 +29,3 @@ func generateID(prefix string) string {
 	randomHex := hex.EncodeToString(randomBytes)
 	return fmt.Sprintf("%s_%d_%s", prefix, timestamp, randomHex)
 }
-

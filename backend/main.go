@@ -11,6 +11,7 @@ import (
 	conversationListService "grandma/backend/modules/conversation_list"
 	documentHandler "grandma/backend/modules/document"
 	documentService "grandma/backend/modules/document"
+	"grandma/backend/modules/story"
 	"grandma/backend/repository"
 	"log"
 
@@ -51,6 +52,7 @@ func main() {
 	// 创建Repository
 	conversationRepo := repository.NewConversationRepository(database.DB)
 	documentRepo := repository.NewDocumentRepository(database.DB)
+	storyRepo := repository.NewStoryRepository(database.DB)
 
 	// 创建Services
 	chatSvc := chatService.NewChatService(
@@ -66,12 +68,14 @@ func main() {
 	conversationListSvc := conversationListService.NewConversationListService(conversationRepo)
 	documentSvc := documentService.NewDocumentService(documentRepo)
 	conversationSvc := conversationService.NewConversationService(conversationRepo, documentRepo)
+	storySvc := story.NewStoryService(storyRepo)
 
 	// 创建Handlers
 	chatHdlr := chatHandler.NewChatHandler(chatSvc)
 	conversationListHdlr := conversationListHandler.NewConversationListHandler(conversationListSvc)
 	documentHdlr := documentHandler.NewDocumentHandler(documentSvc)
 	conversationHdlr := conversationHandler.NewConversationHandler(conversationSvc)
+	storiesHdlr := story.NewStoryHandler(storySvc)
 
 	// 配置路由 - 对话模块
 	api := r.Group("/api")
@@ -95,6 +99,10 @@ func main() {
 		api.GET("/documents/:id", documentHdlr.GetDocumentByID)
 		api.PUT("/documents/:id", documentHdlr.UpdateDocument)
 		api.DELETE("/documents/:id", documentHdlr.DeleteDocument)
+
+		api.GET("/stories", storiesHdlr.GetStoryList)
+		api.POST("/stories", storiesHdlr.CreateStory)
+		api.DELETE("/stories/:id", storiesHdlr.DeleteStory)
 
 		// 获取可用模型列表
 		api.GET("/models", func(c *gin.Context) {

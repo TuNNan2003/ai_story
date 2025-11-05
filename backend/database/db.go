@@ -22,6 +22,7 @@ func InitDB(dbPath string) error {
 	err = DB.AutoMigrate(
 		&models.Conversation{},
 		&models.Document{},
+		&models.Story{},
 	)
 	if err != nil {
 		return err
@@ -30,4 +31,3 @@ func InitDB(dbPath string) error {
 	log.Println("Database initialized successfully")
 	return nil
 }
-

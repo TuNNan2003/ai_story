@@ -36,3 +36,16 @@ type DocumentListResponse struct {
 	Documents []Document `json:"documents"`
 	Total     int        `json:"total"`
 }
+
+// StoryRequest 故事列表请求
+type StoryRequest struct {
+	Guid       string `json:"guid" form:"guid" binding:"required"`
+	DocumentId string `json:"document_id"`
+	Title      string `json:"title"`
+}
+
+// StoryResponse 故事列表响应
+type StoryResponse struct {
+	Story []Story `json:"stories"`
+	Total int     `json:"total"`
+}
