@@ -8,6 +8,7 @@ import (
 
 type ChatProvider interface {
 	ChatStream(messages []models.Message, writer io.Writer) error
+	Chat(messages []models.Message) (string, error) // 非流式，用于生成标题等场景
 }
 
 func GetProvider(providerName, openaiKey, openaiURL, anthropicKey, anthropicURL string) (ChatProvider, error) {

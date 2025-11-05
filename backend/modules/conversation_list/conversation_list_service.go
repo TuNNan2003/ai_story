@@ -3,16 +3,28 @@ package conversation_list
 import (
 	"grandma/backend/models"
 	"grandma/backend/repository"
+	"grandma/backend/services"
 	"grandma/backend/utils"
+	"strings"
 )
 
 type ConversationListService struct {
 	conversationRepo *repository.ConversationRepository
+	config           *TitleGenerationConfig
 }
 
-func NewConversationListService(conversationRepo *repository.ConversationRepository) *ConversationListService {
+type TitleGenerationConfig struct {
+	OpenAIAPIKey     string
+	OpenAIBaseURL    string
+	AnthropicAPIKey  string
+	AnthropicBaseURL string
+	DefaultModel     string // 默认使用哪个模型生成标题
+}
+
+func NewConversationListService(conversationRepo *repository.ConversationRepository, config *TitleGenerationConfig) *ConversationListService {
 	return &ConversationListService{
 		conversationRepo: conversationRepo,
+		config:           config,
 	}
 }
 
@@ -51,4 +63,87 @@ func (s *ConversationListService) CreateNewConversation() (*models.Conversation,
 		return nil, err
 	}
 	return conversation, nil
+}
+
+// CreateNewConversationWithTitle 创建新对话并生成标题
+func (s *ConversationListService) CreateNewConversationWithTitle(userInputs []string) (*models.Conversation, error) {
+	conversationID := utils.GenerateConversationID()
+
+	// 生成标题
+	title := "新对话"
+	if len(userInputs) > 0 {
+		generatedTitle, err := s.generateTitle(userInputs)
+		if err == nil && generatedTitle != "" {
+			title = generatedTitle
+		}
+	}
+
+	conversation := &models.Conversation{
+		ID:          conversationID,
+		Title:       title,
+		DocumentIDs: "",
+	}
+	err := s.conversationRepo.Create(conversation)
+	if err != nil {
+		return nil, err
+	}
+	return conversation, nil
+}
+
+// generateTitle 根据用户输入生成对话标题
+func (s *ConversationListService) generateTitle(userInputs []string) (string, error) {
+	if len(userInputs) == 0 {
+		return "新对话", nil
+	}
+
+	// 构建提示词
+	userMessagesText := strings.Join(userInputs, "\n")
+	prompt := "请根据以下用户输入，生成一个简洁的对话标题（不超过20个字，不要包含标点符号）：\n\n" + userMessagesText
+
+	// 构建消息
+	messages := []models.Message{
+		{
+			Role:    "user",
+			Content: prompt,
+		},
+	}
+
+	// 获取provider
+	model := s.config.DefaultModel
+	if model == "" {
+		model = "openai" // 默认使用openai
+	}
+
+	provider, err := services.GetProvider(
+		model,
+		s.config.OpenAIAPIKey,
+		s.config.OpenAIBaseURL,
+		s.config.AnthropicAPIKey,
+		s.config.AnthropicBaseURL,
+	)
+	if err != nil {
+		return "", err
+	}
+
+	// 调用LLM生成标题
+	title, err := provider.Chat(messages)
+	if err != nil {
+		return "", err
+	}
+
+	// 清理标题（去除前后空格、换行等）
+	title = strings.TrimSpace(title)
+	title = strings.ReplaceAll(title, "\n", "")
+	title = strings.ReplaceAll(title, "\r", "")
+
+	// 限制长度
+	if len(title) > 50 {
+		title = title[:50]
+	}
+
+	if title == "" {
+		title = "新对话"
+	}
+
+	return title, nil
 }

@@ -43,9 +43,30 @@ function App() {
 
   const handleNewChat = async () => {
     try {
-      const response = await fetch('/api/conversations/new', {
-        method: 'POST',
-      })
+      // 收集当前对话的所有用户输入
+      const userInputs = messages
+        .filter(msg => msg.role === 'user')
+        .map(msg => msg.content)
+
+      let response
+      if (userInputs.length > 0) {
+        // 如果有用户输入，发送给后端生成标题
+        response = await fetch('/api/conversations/new-with-title', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            user_inputs: userInputs,
+          }),
+        })
+      } else {
+        // 如果没有用户输入，直接创建新对话
+        response = await fetch('/api/conversations/new', {
+          method: 'POST',
+        })
+      }
+
       if (response.ok) {
         const data = await response.json()
         setCurrentConversationId(data.id)
@@ -55,6 +76,25 @@ function App() {
       }
     } catch (error) {
       console.error('Failed to create new conversation:', error)
+    }
+  }
+
+  const handleRenameConversation = async (conversationId, newTitle) => {
+    try {
+      const response = await fetch(`/api/conversations/${conversationId}/title`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: newTitle,
+        }),
+      })
+      if (response.ok) {
+        fetchConversations() // 刷新对话列表
+      }
+    } catch (error) {
+      console.error('Failed to rename conversation:', error)
     }
   }
 
@@ -204,6 +244,7 @@ function App() {
         onSelectConversation={handleSelectConversation}
         isCollapsed={isHistoryCollapsed}
         onToggleCollapse={() => setIsHistoryCollapsed(!isHistoryCollapsed)}
+        onRenameConversation={handleRenameConversation}
       />
       <div className="main-content">
         <div className="new-chat-button-container">

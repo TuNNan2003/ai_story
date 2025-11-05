@@ -125,3 +125,66 @@ func parseSSE(data string) []string {
 
 	return lines
 }
+
+// Chat 非流式聊天，用于生成标题等场景
+func (p *OpenAIProvider) Chat(messages []models.Message) (string, error) {
+	url := fmt.Sprintf("%s/chat/completions", p.BaseURL)
+
+	// 将消息数组转换为API格式
+	apiMessages := make([]map[string]string, len(messages))
+	for i, msg := range messages {
+		apiMessages[i] = map[string]string{
+			"role":    msg.Role,
+			"content": msg.Content,
+		}
+	}
+
+	payload := map[string]interface{}{
+		"model":    "deepseek-chat",
+		"messages": apiMessages,
+		"stream":   false,
+	}
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return "", err
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return "", err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", p.APIKey))
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("openai api error: %s", string(body))
+	}
+
+	var result struct {
+		Choices []struct {
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
+		} `json:"choices"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", err
+	}
+
+	if len(result.Choices) > 0 {
+		return result.Choices[0].Message.Content, nil
+	}
+
+	return "", fmt.Errorf("no response from OpenAI")
+}
