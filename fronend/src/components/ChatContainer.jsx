@@ -59,19 +59,38 @@ function ChatContainer({ messages, onSendMessage, isLoading, models, selectedMod
     // 检查是否在底部附近（距离底部100px以内）
     const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100
 
-    // 如果是在末尾添加新消息，或者流式响应更新，且用户在底部附近（或者不是用户主动滚动），则自动滚动到底部
+    // 如果是在末尾添加新消息，或者流式响应更新，则自动滚动到底部
     // 这样确保用户发送新消息或AI响应时，页面会自动跟随
-    if (isNewMessageAtEnd || isStreamingUpdate) {
-      // 如果用户在底部附近，或者用户没有主动滚动（发送新消息时），则自动滚动
+    if (isNewMessageAtEnd) {
+      // 如果是新消息添加到末尾，总是滚动到底部（用户发送消息时）
+      requestAnimationFrame(() => {
+        if (containerRef.current) {
+          containerRef.current.scrollTop = containerRef.current.scrollHeight
+          // 再次尝试，确保滚动到底部
+          requestAnimationFrame(() => {
+            if (containerRef.current) {
+              containerRef.current.scrollTop = containerRef.current.scrollHeight
+            }
+          })
+        }
+      })
+    } else if (isStreamingUpdate) {
+      // 如果是流式响应更新，且用户在底部附近或没有主动滚动，则滚动到底部
       if (isNearBottom || !isUserScrolling) {
         // 使用requestAnimationFrame确保DOM更新完成后再滚动
         requestAnimationFrame(() => {
           if (containerRef.current) {
             containerRef.current.scrollTop = containerRef.current.scrollHeight
-            // 再次尝试，确保滚动到底部（处理流式响应时内容不断增长的情况）
+            // 流式响应时，可能需要多次尝试才能完全滚动到底部
             requestAnimationFrame(() => {
               if (containerRef.current) {
                 containerRef.current.scrollTop = containerRef.current.scrollHeight
+                // 流式响应时，内容不断增长，需要持续滚动
+                setTimeout(() => {
+                  if (containerRef.current) {
+                    containerRef.current.scrollTop = containerRef.current.scrollHeight
+                  }
+                }, 50)
               }
             })
           }
@@ -91,13 +110,25 @@ function ChatContainer({ messages, onSendMessage, isLoading, models, selectedMod
       setPrevScrollTop(currentScrollTop)
 
       // 检测用户是否在滚动
-      setIsUserScrolling(true)
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current)
-      }
-      scrollTimeoutRef.current = setTimeout(() => {
+      // 只有在用户主动滚动时才设置为true（而不是系统自动滚动）
+      // 通过检查滚动位置是否在底部附近来判断是否是用户主动滚动
+      const isNearBottomForScroll = container.scrollHeight - currentScrollTop - container.clientHeight < 100
+      if (!isNearBottomForScroll) {
+        // 用户滚动到了非底部位置，说明是用户主动滚动
+        setIsUserScrolling(true)
+        if (scrollTimeoutRef.current) {
+          clearTimeout(scrollTimeoutRef.current)
+        }
+        scrollTimeoutRef.current = setTimeout(() => {
+          setIsUserScrolling(false)
+        }, 500) // 延长超时时间，避免快速滚动时误判
+      } else {
+        // 用户在底部附近，可能是自动滚动，重置用户滚动状态
         setIsUserScrolling(false)
-      }, 200)
+        if (scrollTimeoutRef.current) {
+          clearTimeout(scrollTimeoutRef.current)
+        }
+      }
 
       // 如果滚动到顶部附近（距离顶部50px以内），自动加载更多
       // 使用isTriggeredRef防止重复触发

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import ChatContainer from './components/ChatContainer'
 import ConversationHistory from './components/ConversationHistory'
 import './App.css'
@@ -20,6 +20,16 @@ function App() {
     const saved = localStorage.getItem('conversationHistoryWidth')
     return saved ? parseInt(saved, 10) : 260
   })
+  
+  // 用于跟踪当前的流式响应读取器，以便在切换对话时取消
+  const readerRef = useRef(null)
+  const abortControllerRef = useRef(null)
+  const currentConversationIdRef = useRef(null)
+  
+  // 同步currentConversationId到ref，以便在异步函数中使用最新值
+  useEffect(() => {
+    currentConversationIdRef.current = currentConversationId
+  }, [currentConversationId])
 
   useEffect(() => {
     fetchModels()
@@ -140,10 +150,140 @@ function App() {
     }
   }
 
+  // 获取对话的所有用户输入（用于自动命名）
+  const getAllUserInputsForConversation = async (convId) => {
+    const userInputs = []
+    let beforeID = null
+    let hasMore = true
+
+    while (hasMore) {
+      try {
+        // 获取文档ID列表
+        const url = beforeID
+          ? `/api/documents/ids?conversation_id=${convId}&before_id=${beforeID}&limit=100`
+          : `/api/documents/ids?conversation_id=${convId}&limit=100`
+        
+        const idsResponse = await fetch(url)
+        if (!idsResponse.ok) {
+          break
+        }
+
+        const idsData = await idsResponse.json()
+        const documentIDs = idsData.document_ids || []
+
+        if (documentIDs.length === 0) {
+          hasMore = false
+          break
+        }
+
+        // 并发请求所有文档的详细信息
+        const documentPromises = documentIDs.map(id =>
+          fetch(`/api/documents/${id}`)
+            .then(response => {
+              if (!response.ok) {
+                throw new Error(`Failed to get document ${id}`)
+              }
+              return response.json()
+            })
+            .catch(error => {
+              console.error(`Error fetching document ${id}:`, error)
+              return null
+            })
+        )
+
+        const documentResults = await Promise.all(documentPromises)
+        
+        // 过滤掉失败的结果，并按ID顺序排序（保持时间顺序）
+        const documents = documentResults
+          .filter(doc => doc !== null)
+          .sort((a, b) => {
+            // 按照documentIDs的顺序排序，确保时间顺序正确
+            const indexA = documentIDs.indexOf(a.id)
+            const indexB = documentIDs.indexOf(b.id)
+            return indexA - indexB
+          })
+        
+        // 收集用户输入（按时间顺序）
+        documents.forEach(doc => {
+          if (doc.role === 'user') {
+            userInputs.push(doc.content)
+          }
+        })
+
+        // 如果返回的文档数量小于limit，说明没有更多了
+        if (documentIDs.length < 100) {
+          hasMore = false
+        } else {
+          // 更新beforeID为最早的文档ID（因为documents是按时间正序排列的）
+          beforeID = documentIDs[0]
+        }
+      } catch (error) {
+        console.error('Failed to get user inputs:', error)
+        hasMore = false
+      }
+    }
+
+    return userInputs
+  }
+
   const handleSelectConversation = async (conversationId) => {
     // 如果点击的是当前对话，不发起请求
     if (conversationId === currentConversationId) {
       return
+    }
+
+    // 如果正在加载中（流式响应进行中），取消当前的请求
+    if (isLoading) {
+      // 取消流式响应读取器
+      if (readerRef.current) {
+        try {
+          await readerRef.current.cancel()
+        } catch (error) {
+          console.error('Error canceling reader:', error)
+        }
+        readerRef.current = null
+      }
+      // 取消fetch请求
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+        abortControllerRef.current = null
+      }
+      // 重置加载状态
+      setIsLoading(false)
+    }
+
+    // 在切换对话前，检查旧对话是否需要自动命名
+    const oldConversationId = currentConversationId
+    if (oldConversationId) {
+      const oldConversation = conversations.find(c => c.id === oldConversationId)
+      if (oldConversation && oldConversation.title === '新对话') {
+        // 旧对话有默认标题，需要自动命名
+        // 获取旧对话的所有用户输入
+        try {
+          const userInputs = await getAllUserInputsForConversation(oldConversationId)
+          if (userInputs.length > 0) {
+            // 调用智能命名接口生成标题
+            const titleResponse = await fetch('/api/conversations/generate-title', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                user_inputs: userInputs,
+              }),
+            })
+
+            if (titleResponse.ok) {
+              const titleData = await titleResponse.json()
+              // 使用生成的标题重命名旧对话
+              await handleRenameConversation(oldConversationId, titleData.title)
+            }
+          }
+        } catch (error) {
+          console.error('Failed to auto-name old conversation:', error)
+          // 即使命名失败，也继续切换对话
+        }
+      }
     }
 
     setCurrentConversationId(conversationId)
@@ -355,6 +495,10 @@ function App() {
     }
     setMessages((prev) => [...prev, assistantMessage])
 
+    // 创建AbortController用于取消请求
+    const abortController = new AbortController()
+    abortControllerRef.current = abortController
+
     try {
       // 前端仅携带本次用户请求的内容
       const response = await fetch('/api/chat', {
@@ -372,6 +516,7 @@ function App() {
             },
           ],
         }),
+        signal: abortController.signal,
       })
 
       if (!response.ok) {
@@ -379,6 +524,7 @@ function App() {
       }
 
       const reader = response.body.getReader()
+      readerRef.current = reader
       const decoder = new TextDecoder()
       let fullContent = ''
 
@@ -386,35 +532,70 @@ function App() {
         const { done, value } = await reader.read()
         if (done) break
 
+        // 检查是否还在当前对话（如果切换了对话，停止处理）
+        // 使用ref来获取最新的conversationId值
+        if (currentConversationIdRef.current !== conversationId) {
+          await reader.cancel()
+          break
+        }
+
         const chunk = decoder.decode(value, { stream: true })
         fullContent += chunk
 
-        setMessages((prev) => {
-          const newMessages = [...prev]
-          const lastMessage = newMessages[newMessages.length - 1]
-          if (lastMessage.role === 'assistant') {
-            lastMessage.content = fullContent
-          }
-          return newMessages
-        })
+        // 检查是否还在当前对话（如果切换了对话，停止更新消息）
+        // 使用ref来获取最新的conversationId值
+        if (currentConversationIdRef.current === conversationId) {
+          setMessages((prev) => {
+            const newMessages = [...prev]
+            const lastMessage = newMessages[newMessages.length - 1]
+            if (lastMessage && lastMessage.role === 'assistant') {
+              lastMessage.content = fullContent
+            }
+            return newMessages
+          })
+        }
       }
+      
+      // 清理引用
+      readerRef.current = null
+      abortControllerRef.current = null
       // 只有在新对话第一次发送消息时才刷新列表（更新标题）
       // 已存在的对话不需要刷新，因为用户已经在当前对话中
       if (isNewConversation) {
         await fetchConversations()
       }
     } catch (error) {
+      // 如果是AbortError，说明请求被取消了（可能是切换对话），不需要处理错误
+      if (error.name === 'AbortError') {
+        console.log('Request aborted (conversation switched)')
+        // 清理引用
+        readerRef.current = null
+        abortControllerRef.current = null
+        return
+      }
+      
       console.error('Error:', error)
-      setMessages((prev) => {
-        const newMessages = [...prev]
-        const lastMessage = newMessages[newMessages.length - 1]
-        if (lastMessage.role === 'assistant') {
-          lastMessage.content = '抱歉，发生了错误：' + error.message
-        }
-        return newMessages
-      })
+      // 只有在当前对话时才更新错误消息
+      // 使用ref来获取最新的conversationId值
+      if (currentConversationIdRef.current === conversationId) {
+        setMessages((prev) => {
+          const newMessages = [...prev]
+          const lastMessage = newMessages[newMessages.length - 1]
+          if (lastMessage && lastMessage.role === 'assistant') {
+            lastMessage.content = '抱歉，发生了错误：' + error.message
+          }
+          return newMessages
+        })
+      }
     } finally {
-      setIsLoading(false)
+      // 只有在当前对话时才重置加载状态
+      // 使用ref来获取最新的conversationId值
+      if (currentConversationIdRef.current === conversationId) {
+        setIsLoading(false)
+      }
+      // 清理引用
+      readerRef.current = null
+      abortControllerRef.current = null
     }
   }
 
