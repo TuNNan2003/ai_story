@@ -559,12 +559,42 @@ function App() {
 
   // 计算文本的SHA-256特征值
   const calculateContentHash = async (content) => {
-    const encoder = new TextEncoder()
-    const data = encoder.encode(content)
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-    const hashArray = Array.from(new Uint8Array(hashBuffer))
-    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-    return hashHex
+    // 检查 crypto.subtle 是否可用（仅在安全上下文（HTTPS 或 localhost）中可用）
+    if (typeof crypto !== 'undefined' && crypto.subtle) {
+      try {
+        const encoder = new TextEncoder()
+        const data = encoder.encode(content)
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+        const hashArray = Array.from(new Uint8Array(hashBuffer))
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+        return hashHex
+      } catch (error) {
+        console.error('Failed to calculate hash with crypto.subtle:', error)
+        // 降级到简单哈希
+        return calculateSimpleHash(content)
+      }
+    } else {
+      // crypto.subtle 不可用，使用简单哈希作为降级方案
+      console.warn('crypto.subtle is not available, using simple hash')
+      return calculateSimpleHash(content)
+    }
+  }
+
+  // 简单的哈希函数（降级方案）
+  // 注意：这不是真正的SHA-256，但可以作为一个简单的特征值
+  const calculateSimpleHash = (content) => {
+    let hash = 0
+    if (content.length === 0) return hash.toString(16).padStart(64, '0')
+    
+    for (let i = 0; i < content.length; i++) {
+      const char = content.charCodeAt(i)
+      hash = ((hash << 5) - hash) + char
+      hash = hash & hash // 转换为32位整数
+    }
+    
+    // 转换为64位十六进制字符串（模拟SHA-256的长度）
+    const hashStr = Math.abs(hash).toString(16)
+    return hashStr.padStart(64, '0')
   }
 
   const handleAddToStory = async (documentId) => {
