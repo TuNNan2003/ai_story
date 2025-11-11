@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import CryptoJS from 'crypto-js'
 import ChatContainer from './components/ChatContainer'
 import ConversationHistory from './components/ConversationHistory'
 import StoryEditDialog from './components/StoryEditDialog'
@@ -558,8 +559,10 @@ function App() {
   }
 
   // 计算文本的SHA-256特征值
+  // 使用 crypto-js 库，确保在任何环境下都能计算真正的 SHA-256 哈希
+  // 这样就能与后端保持一致，避免 hash_mismatch 错误
   const calculateContentHash = async (content) => {
-    // 检查 crypto.subtle 是否可用（仅在安全上下文（HTTPS 或 localhost）中可用）
+    // 优先使用 crypto.subtle（如果可用），因为它更快且是原生API
     if (typeof crypto !== 'undefined' && crypto.subtle) {
       try {
         const encoder = new TextEncoder()
@@ -570,31 +573,14 @@ function App() {
         return hashHex
       } catch (error) {
         console.error('Failed to calculate hash with crypto.subtle:', error)
-        // 降级到简单哈希
-        return calculateSimpleHash(content)
+        // 降级到 crypto-js
+        return CryptoJS.SHA256(content).toString()
       }
     } else {
-      // crypto.subtle 不可用，使用简单哈希作为降级方案
-      console.warn('crypto.subtle is not available, using simple hash')
-      return calculateSimpleHash(content)
+      // crypto.subtle 不可用，使用 crypto-js 作为降级方案
+      // crypto-js 可以在任何环境下工作，包括非 HTTPS 环境
+      return CryptoJS.SHA256(content).toString()
     }
-  }
-
-  // 简单的哈希函数（降级方案）
-  // 注意：这不是真正的SHA-256，但可以作为一个简单的特征值
-  const calculateSimpleHash = (content) => {
-    let hash = 0
-    if (content.length === 0) return hash.toString(16).padStart(64, '0')
-    
-    for (let i = 0; i < content.length; i++) {
-      const char = content.charCodeAt(i)
-      hash = ((hash << 5) - hash) + char
-      hash = hash & hash // 转换为32位整数
-    }
-    
-    // 转换为64位十六进制字符串（模拟SHA-256的长度）
-    const hashStr = Math.abs(hash).toString(16)
-    return hashStr.padStart(64, '0')
   }
 
   const handleAddToStory = async (documentId) => {
