@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import './StoryEditDialog.css'
 
-function StoryEditDialog({ isOpen, content, title: initialTitle, onClose, onSave }) {
+function StoryEditDialog({ isOpen, content, title: initialTitle, onClose, onSave, storyId }) {
   const [editedContent, setEditedContent] = useState(content || '')
   const [editedTitle, setEditedTitle] = useState(initialTitle || '')
   const [isSaving, setIsSaving] = useState(false)
@@ -47,7 +47,7 @@ function StoryEditDialog({ isOpen, content, title: initialTitle, onClose, onSave
     <div className="story-edit-dialog-overlay" onClick={handleClose}>
       <div className="story-edit-dialog" onClick={(e) => e.stopPropagation()}>
         <div className="story-edit-dialog-header">
-          <h3 className="story-edit-dialog-title">编辑故事</h3>
+          <h3 className="story-edit-dialog-title">{storyId ? '编辑故事' : '添加为故事'}</h3>
           <div className="story-edit-dialog-actions">
             <button
               className="story-edit-dialog-close-btn"
@@ -83,7 +83,7 @@ function StoryEditDialog({ isOpen, content, title: initialTitle, onClose, onSave
               value={editedContent}
               onChange={(e) => setEditedContent(e.target.value)}
               placeholder="请输入故事内容"
-              rows={15}
+              rows={25}
             />
           </div>
           {error && (

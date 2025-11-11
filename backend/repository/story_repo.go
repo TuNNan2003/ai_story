@@ -64,3 +64,19 @@ func (r *StoryRepository) GetByContentHash(guid, contentHash string) (*models.St
 	}
 	return &story, nil
 }
+
+// GetByID 根据ID获取故事
+func (r *StoryRepository) GetByID(id string) (*models.Story, error) {
+	var story models.Story
+	err := r.db.Where("id = ?", id).First(&story).Error
+	if err != nil {
+		return nil, err
+	}
+	return &story, nil
+}
+
+// Update 更新故事
+func (r *StoryRepository) Update(story *models.Story) error {
+	story.UpdatedAt = time.Now()
+	return r.db.Save(story).Error
+}
