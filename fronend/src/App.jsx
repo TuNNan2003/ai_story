@@ -3,6 +3,7 @@ import CryptoJS from 'crypto-js'
 import ChatContainer from './components/ChatContainer'
 import ConversationHistory from './components/ConversationHistory'
 import StoryEditDialog from './components/StoryEditDialog'
+import StoryViewDialog from './components/StoryViewDialog'
 import './App.css'
 
 function App() {
@@ -19,6 +20,8 @@ function App() {
   const [storyEditTitle, setStoryEditTitle] = useState('')
   const [storyEditDocumentId, setStoryEditDocumentId] = useState(null)
   const [storyEditStoryId, setStoryEditStoryId] = useState(null)
+  const [storyViewDialogOpen, setStoryViewDialogOpen] = useState(false)
+  const [selectedStory, setSelectedStory] = useState(null)
   const [isHistoryView, setIsHistoryView] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [hasMoreMessages, setHasMoreMessages] = useState(false)
@@ -731,18 +734,9 @@ function App() {
   }
 
   const handleSelectStory = async (story) => {
-    // 当选择故事时，加载对应的文档内容
-    try {
-      const docResponse = await fetch(addUserIdToUrl(`/api/documents/${story.document_id}`))
-      if (docResponse.ok) {
-        const doc = await docResponse.json()
-        // 显示故事内容（可以创建一个新的消息显示）
-        // 这里可以根据需要实现故事查看功能
-        console.log('Story selected:', story)
-      }
-    } catch (error) {
-      console.error('Failed to load story:', error)
-    }
+    // 当选择故事时，打开故事查看对话框
+    setSelectedStory(story)
+    setStoryViewDialogOpen(true)
   }
 
   const handleSendMessage = async (message) => {
@@ -1069,6 +1063,14 @@ function App() {
           setStoryEditStoryId(null)
         }}
         onSave={handleSaveStory}
+      />
+      <StoryViewDialog
+        isOpen={storyViewDialogOpen}
+        story={selectedStory}
+        onClose={() => {
+          setStoryViewDialogOpen(false)
+          setSelectedStory(null)
+        }}
       />
     </div>
   )
