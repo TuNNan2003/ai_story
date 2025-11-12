@@ -76,3 +76,29 @@ type StoryResponse struct {
 	Story []Story `json:"stories"`
 	Total int     `json:"total"`
 }
+
+// WorkRequest 创作请求
+type WorkRequest struct {
+	UserID string `json:"user_id" form:"user_id" binding:"required"` // 用户ID
+	Title  string `json:"title"`                                     // 创作标题
+}
+
+// WorkResponse 创作响应
+type WorkResponse struct {
+	Works []Work `json:"works"`
+	Total int    `json:"total"`
+}
+
+// WorkDocumentRequest 创作文档请求
+type WorkDocumentRequest struct {
+	UserID  string `json:"user_id" binding:"required"` // 用户ID
+	WorkID  string `json:"work_id" binding:"required"` // 创作ID
+	Title   string `json:"title" binding:"required"`   // 文档标题
+	Content string `json:"content"`                    // 文档内容
+}
+
+// WorkDocumentResponse 创作文档响应
+type WorkDocumentResponse struct {
+	Documents []WorkDocument `json:"documents"`
+	Total     int            `json:"total"`
+}

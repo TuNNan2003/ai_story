@@ -153,3 +153,19 @@
   }
 }
 
+.message-complete-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  margin: 4px 0 4px auto;
+  color: rgba(16, 163, 127, 0.8);
+  font-size: 12px;
+  background-color: rgba(16, 163, 127, 0.1);
+  border-radius: 6px;
+  width: fit-content;
+  max-width: 768px;
+  margin-left: auto;
+  margin-right: 20px;
+}
+

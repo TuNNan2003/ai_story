@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import './EnhancedInputArea.css'
 
-function EnhancedInputArea({ onSendMessage, isLoading, models, selectedModel, onModelChange, hasMessages }) {
+function EnhancedInputArea({ onSendMessage, isLoading, models, selectedModel, onModelChange, hasMessages, isInspirationMode = false, isModifyOriginal = false, onModifyOriginalChange }) {
   const [input, setInput] = useState('')
   const textareaRef = useRef(null)
 
@@ -51,6 +51,17 @@ function EnhancedInputArea({ onSendMessage, isLoading, models, selectedModel, on
               </option>
             ))}
           </select>
+          {isInspirationMode && hasMessages && (
+            <label className="modify-original-checkbox">
+              <input
+                type="checkbox"
+                checked={isModifyOriginal}
+                onChange={(e) => onModifyOriginalChange && onModifyOriginalChange(e.target.checked)}
+                disabled={isLoading}
+              />
+              <span>在原文上修改</span>
+            </label>
+          )}
         </div>
         <div className="input-bottom-bar">
           <textarea

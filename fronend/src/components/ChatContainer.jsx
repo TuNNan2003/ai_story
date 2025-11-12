@@ -1,9 +1,10 @@
 import { useRef, useEffect, useState } from 'react'
 import MessageList from './MessageList'
 import EnhancedInputArea from './EnhancedInputArea'
+import InspirationMarkdownView from './InspirationMarkdownView'
 import './ChatContainer.css'
 
-function ChatContainer({ messages, onSendMessage, isLoading, models, selectedModel, onModelChange, enableTypewriter = true, onLoadMore, canLoadMore, isLoadingMore, shouldScrollToBottom = false }) {
+function ChatContainer({ messages, onSendMessage, isLoading, models, selectedModel, onModelChange, enableTypewriter = true, onLoadMore, canLoadMore, isLoadingMore, shouldScrollToBottom = false, isInspirationMode = false, currentWorkId = null, isModifyOriginal = false, onModifyOriginalChange }) {
   const containerRef = useRef(null)
   const [prevScrollHeight, setPrevScrollHeight] = useState(0)
   const [prevScrollTop, setPrevScrollTop] = useState(0)
@@ -279,26 +280,72 @@ function ChatContainer({ messages, onSendMessage, isLoading, models, selectedMod
     lastMessageIdsRef.current = currentMessageIds
   }, [messages, isLoadingMore])
 
+  // 获取最后一条AI响应的内容（用于右侧Markdown渲染）
+  const lastAssistantMessage = messages.filter(m => m.role === 'assistant').slice(-1)[0]
+  const lastAssistantContent = lastAssistantMessage?.content || ''
+  const isLastMessageComplete = !isLoading && lastAssistantMessage && lastAssistantMessage.content.length > 0
+
+  // 在灵感模式下，如果还没有对话，显示初始界面
+  const hasConversation = messages.length > 0
+
   return (
-    <div className="chat-container">
-      <div className="chat-messages" ref={containerRef}>
-        <MessageList
-          messages={messages}
-          isLoading={isLoading}
-          enableTypewriter={enableTypewriter}
-          onLoadMore={onLoadMore}
-          canLoadMore={canLoadMore}
-          isLoadingMore={isLoadingMore}
-        />
-      </div>
-      <EnhancedInputArea
-        onSendMessage={onSendMessage}
-        isLoading={isLoading}
-        models={models}
-        selectedModel={selectedModel}
-        onModelChange={onModelChange}
-        hasMessages={messages.length > 0}
-      />
+    <div className={`chat-container ${isInspirationMode && hasConversation ? 'inspiration-mode' : ''}`}>
+      {isInspirationMode && hasConversation ? (
+        <div className="inspiration-layout">
+          <div className="inspiration-left">
+            <div className="chat-messages" ref={containerRef}>
+              <MessageList
+                messages={messages}
+                isLoading={isLoading}
+                enableTypewriter={false}
+                onLoadMore={onLoadMore}
+                canLoadMore={canLoadMore}
+                isLoadingMore={isLoadingMore}
+                isInspirationMode={true}
+                isLastMessageComplete={isLastMessageComplete}
+              />
+            </div>
+            <EnhancedInputArea
+              onSendMessage={onSendMessage}
+              isLoading={isLoading}
+              models={models}
+              selectedModel={selectedModel}
+              onModelChange={onModelChange}
+              hasMessages={messages.length > 0}
+              isInspirationMode={true}
+              isModifyOriginal={isModifyOriginal}
+              onModifyOriginalChange={onModifyOriginalChange}
+            />
+          </div>
+          <div className="inspiration-right">
+            <InspirationMarkdownView
+              content={lastAssistantContent}
+              isLoading={isLoading}
+            />
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="chat-messages" ref={containerRef}>
+            <MessageList
+              messages={messages}
+              isLoading={isLoading}
+              enableTypewriter={enableTypewriter}
+              onLoadMore={onLoadMore}
+              canLoadMore={canLoadMore}
+              isLoadingMore={isLoadingMore}
+            />
+          </div>
+          <EnhancedInputArea
+            onSendMessage={onSendMessage}
+            isLoading={isLoading}
+            models={models}
+            selectedModel={selectedModel}
+            onModelChange={onModelChange}
+            hasMessages={messages.length > 0}
+          />
+        </>
+      )}
     </div>
   )
 }

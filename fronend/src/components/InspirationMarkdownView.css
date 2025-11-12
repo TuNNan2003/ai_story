@@ -1,0 +1,153 @@
+.inspiration-markdown-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: #343541;
+}
+
+.inspiration-markdown-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  color: #ececf1;
+  line-height: 1.8;
+  font-size: 15px;
+}
+
+.inspiration-markdown-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: rgba(236, 236, 241, 0.5);
+  font-size: 14px;
+}
+
+/* Markdown 样式 */
+.inspiration-markdown-content h1,
+.inspiration-markdown-content h2,
+.inspiration-markdown-content h3,
+.inspiration-markdown-content h4,
+.inspiration-markdown-content h5,
+.inspiration-markdown-content h6 {
+  color: #ececf1;
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+.inspiration-markdown-content h1 {
+  font-size: 28px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 8px;
+}
+
+.inspiration-markdown-content h2 {
+  font-size: 24px;
+}
+
+.inspiration-markdown-content h3 {
+  font-size: 20px;
+}
+
+.inspiration-markdown-content p {
+  margin-bottom: 16px;
+  color: rgba(236, 236, 241, 0.9);
+}
+
+.inspiration-markdown-content ul,
+.inspiration-markdown-content ol {
+  margin-bottom: 16px;
+  padding-left: 24px;
+  color: rgba(236, 236, 241, 0.9);
+}
+
+.inspiration-markdown-content li {
+  margin-bottom: 8px;
+}
+
+.inspiration-markdown-content code {
+  background-color: rgba(0, 0, 0, 0.3);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  color: #f9a825;
+}
+
+.inspiration-markdown-content pre {
+  background-color: rgba(0, 0, 0, 0.4);
+  padding: 16px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin-bottom: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.inspiration-markdown-content pre code {
+  background-color: transparent;
+  padding: 0;
+  color: #ececf1;
+}
+
+.inspiration-markdown-content blockquote {
+  border-left: 4px solid rgba(255, 255, 255, 0.3);
+  padding-left: 16px;
+  margin: 16px 0;
+  color: rgba(236, 236, 241, 0.8);
+  font-style: italic;
+}
+
+.inspiration-markdown-content a {
+  color: rgba(59, 130, 246, 0.9);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.inspiration-markdown-content a:hover {
+  color: rgba(59, 130, 246, 1);
+  text-decoration: underline;
+}
+
+.inspiration-markdown-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+}
+
+.inspiration-markdown-content th,
+.inspiration-markdown-content td {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.inspiration-markdown-content th {
+  background-color: rgba(255, 255, 255, 0.05);
+  font-weight: 600;
+}
+
+.inspiration-markdown-content hr {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 24px 0;
+}
+
+.inspiration-markdown-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.inspiration-markdown-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.inspiration-markdown-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.inspiration-markdown-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+

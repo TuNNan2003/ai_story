@@ -50,6 +50,29 @@
 .input-top-bar {
   display: flex;
   align-items: center;
+  gap: 12px;
+}
+
+.modify-original-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+  color: rgba(236, 236, 241, 0.8);
+  font-size: 13px;
+}
+
+.modify-original-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: rgba(16, 163, 127, 0.8);
+}
+
+.modify-original-checkbox input[type="checkbox"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .model-select-inline {

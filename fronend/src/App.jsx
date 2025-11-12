@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import CryptoJS from 'crypto-js'
 import ChatContainer from './components/ChatContainer'
 import ConversationHistory from './components/ConversationHistory'
+import WorkHistory from './components/WorkHistory'
+import WorkDocumentList from './components/WorkDocumentList'
 import StoryEditDialog from './components/StoryEditDialog'
 import StoryViewDialog from './components/StoryViewDialog'
 import './App.css'
@@ -23,6 +25,11 @@ function App() {
   const [storyViewDialogOpen, setStoryViewDialogOpen] = useState(false)
   const [selectedStory, setSelectedStory] = useState(null)
   const [isHistoryView, setIsHistoryView] = useState(false)
+  const [isInspirationMode, setIsInspirationMode] = useState(false)
+  const [works, setWorks] = useState([])
+  const [currentWorkId, setCurrentWorkId] = useState(null)
+  const [workDocuments, setWorkDocuments] = useState([])
+  const [isModifyOriginal, setIsModifyOriginal] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [hasMoreMessages, setHasMoreMessages] = useState(false)
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false)
@@ -58,7 +65,21 @@ function App() {
     fetchModels()
     fetchConversations()
     fetchStories()
+    fetchWorks()
   }, [])
+
+  // 当灵感模式开启时，获取works；当选择work时，获取documents
+  useEffect(() => {
+    if (isInspirationMode) {
+      fetchWorks()
+    }
+  }, [isInspirationMode])
+
+  useEffect(() => {
+    if (currentWorkId) {
+      fetchWorkDocuments(currentWorkId)
+    }
+  }, [currentWorkId])
 
   // 辅助函数：为URL添加用户ID参数
   const addUserIdToUrl = (url) => {
@@ -97,6 +118,26 @@ function App() {
       setStories(data.stories || [])
     } catch (error) {
       console.error('Failed to fetch stories:', error)
+    }
+  }
+
+  const fetchWorks = async () => {
+    try {
+      const response = await fetch(addUserIdToUrl('/api/works'))
+      const data = await response.json()
+      setWorks(data.works || [])
+    } catch (error) {
+      console.error('Failed to fetch works:', error)
+    }
+  }
+
+  const fetchWorkDocuments = async (workId) => {
+    try {
+      const response = await fetch(addUserIdToUrl(`/api/works/${workId}/documents`))
+      const data = await response.json()
+      setWorkDocuments(data.documents || [])
+    } catch (error) {
+      console.error('Failed to fetch work documents:', error)
     }
   }
 
@@ -739,6 +780,71 @@ function App() {
     setStoryViewDialogOpen(true)
   }
 
+  // 创作相关处理函数
+  const handleNewWork = async () => {
+    try {
+      const response = await fetch('/api/works', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          title: '新创作',
+        }),
+      })
+      if (response.ok) {
+        const work = await response.json()
+        await fetchWorks()
+        setCurrentWorkId(work.id)
+      }
+    } catch (error) {
+      console.error('Failed to create work:', error)
+    }
+  }
+
+  const handleSelectWork = async (workId) => {
+    setCurrentWorkId(workId)
+    await fetchWorkDocuments(workId)
+  }
+
+  const handleRenameWork = async (workId, newTitle) => {
+    try {
+      const response = await fetch(`/api/works/${workId}/title`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          title: newTitle,
+        }),
+      })
+      if (response.ok) {
+        await fetchWorks()
+      }
+    } catch (error) {
+      console.error('Failed to rename work:', error)
+    }
+  }
+
+  const handleDeleteWork = async (workId) => {
+    try {
+      const response = await fetch(addUserIdToUrl(`/api/works/${workId}`), {
+        method: 'DELETE',
+      })
+      if (response.ok) {
+        await fetchWorks()
+        if (currentWorkId === workId) {
+          setCurrentWorkId(null)
+          setWorkDocuments([])
+        }
+      }
+    } catch (error) {
+      console.error('Failed to delete work:', error)
+    }
+  }
+
   const handleSendMessage = async (message) => {
     if (!message.trim() || isLoading) return
 
@@ -1004,39 +1110,70 @@ function App() {
 
   return (
     <div className="app">
-      <ConversationHistory
-        conversations={conversations}
-        currentConversationId={currentConversationId}
-        onSelectConversation={handleSelectConversation}
-        isCollapsed={isHistoryCollapsed}
-        onToggleCollapse={() => setIsHistoryCollapsed(!isHistoryCollapsed)}
-        onRenameConversation={handleRenameConversation}
-        onDeleteConversation={handleDeleteConversation}
-        width={historyWidth}
-        onWidthChange={(newWidth) => {
-          setHistoryWidth(newWidth)
-          localStorage.setItem('conversationHistoryWidth', newWidth.toString())
-        }}
-        stories={stories}
-        onSelectStory={handleSelectStory}
-        onEditStory={handleEditStory}
-        onDeleteStory={handleDeleteStory}
-      />
+      {isInspirationMode ? (
+        <WorkHistory
+          works={works}
+          currentWorkId={currentWorkId}
+          onSelectWork={handleSelectWork}
+          isCollapsed={isHistoryCollapsed}
+          onToggleCollapse={() => setIsHistoryCollapsed(!isHistoryCollapsed)}
+          onRenameWork={handleRenameWork}
+          onDeleteWork={handleDeleteWork}
+          width={historyWidth}
+          onWidthChange={(newWidth) => {
+            setHistoryWidth(newWidth)
+            localStorage.setItem('conversationHistoryWidth', newWidth.toString())
+          }}
+          onNewWork={handleNewWork}
+        />
+      ) : (
+        <ConversationHistory
+          conversations={conversations}
+          currentConversationId={currentConversationId}
+          onSelectConversation={handleSelectConversation}
+          isCollapsed={isHistoryCollapsed}
+          onToggleCollapse={() => setIsHistoryCollapsed(!isHistoryCollapsed)}
+          onRenameConversation={handleRenameConversation}
+          onDeleteConversation={handleDeleteConversation}
+          width={historyWidth}
+          onWidthChange={(newWidth) => {
+            setHistoryWidth(newWidth)
+            localStorage.setItem('conversationHistoryWidth', newWidth.toString())
+          }}
+          stories={stories}
+          onSelectStory={handleSelectStory}
+          onEditStory={handleEditStory}
+          onDeleteStory={handleDeleteStory}
+        />
+      )}
       <div className="main-content">
-        <div className="new-chat-button-container">
-          <button onClick={handleNewChat} className="new-chat-button-top">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path
-                d="M8 1v14M1 8h14"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
-            新对话
-          </button>
-        </div>
-        <ChatContainer
+        <div className="main-content-chat">
+          <div className="new-chat-button-container">
+            <button onClick={handleNewChat} className="new-chat-button-top">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path
+                  d="M8 1v14M1 8h14"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+              新对话
+            </button>
+            <div className="inspiration-mode-toggle">
+              <label className="toggle-label">
+                <input
+                  type="checkbox"
+                  checked={isInspirationMode}
+                  onChange={(e) => setIsInspirationMode(e.target.checked)}
+                  className="toggle-input"
+                />
+                <span className="toggle-slider"></span>
+                <span className="toggle-text">灵感模式</span>
+              </label>
+            </div>
+          </div>
+          <ChatContainer
           messages={messages}
           onSendMessage={handleSendMessage}
           isLoading={isLoading}
@@ -1048,7 +1185,21 @@ function App() {
           canLoadMore={isHistoryView && hasMoreMessages}
           isLoadingMore={isLoadingMore}
           shouldScrollToBottom={shouldScrollToBottom}
+          isInspirationMode={isInspirationMode}
+          currentWorkId={currentWorkId}
+          isModifyOriginal={isModifyOriginal}
+          onModifyOriginalChange={setIsModifyOriginal}
         />
+        </div>
+        {isInspirationMode && currentWorkId && (
+          <WorkDocumentList
+            documents={workDocuments}
+            onNewDocument={handleNewDocument}
+            onRenameDocument={handleRenameDocument}
+            onDeleteDocument={handleDeleteDocument}
+            onSelectDocument={handleSelectDocument}
+          />
+        )}
       </div>
         <StoryEditDialog
         isOpen={storyEditDialogOpen}
