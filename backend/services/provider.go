@@ -6,11 +6,13 @@ import (
 	"io"
 )
 
+// ChatProvider 聊天服务提供者接口
 type ChatProvider interface {
 	ChatStream(messages []models.Message, writer io.Writer) error
 	Chat(messages []models.Message) (string, error) // 非流式，用于生成标题等场景
 }
 
+// GetProvider 获取聊天服务提供者
 func GetProvider(providerName, openaiKey, openaiURL, anthropicKey, anthropicURL string) (ChatProvider, error) {
 	switch providerName {
 	case "openai", "gpt-3.5-turbo", "gpt-4":

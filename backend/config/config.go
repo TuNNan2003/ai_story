@@ -6,6 +6,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// Config 应用配置结构体
 type Config struct {
 	Port               string
 	CorsAllowedOrigins string
@@ -20,6 +21,7 @@ type Config struct {
 	EmbeddingAPIKey    string // Embedding API Key
 }
 
+// LoadConfig 加载应用配置
 func LoadConfig() (*Config, error) {
 	// 尝试加载.env文件，如果不存在也不报错
 	_ = godotenv.Load()

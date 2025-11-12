@@ -2,6 +2,7 @@ package models
 
 import "time"
 
+// Story 故事模型
 type Story struct {
 	ID          string    `json:"id" gorm:"primaryKey"`
 	UserID      string    `json:"user_id" gorm:"index"` // 用户ID

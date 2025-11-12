@@ -7,10 +7,12 @@ import (
 	"gorm.io/gorm"
 )
 
+// WorkRepository 创作仓库
 type WorkRepository struct {
 	db *gorm.DB
 }
 
+// NewWorkRepository 创建创作仓库
 func NewWorkRepository(db *gorm.DB) *WorkRepository {
 	return &WorkRepository{db: db}
 }

@@ -10,6 +10,7 @@ import (
 	"strings"
 )
 
+// ChatService 聊天服务
 type ChatService struct {
 	conversationRepo *repository.ConversationRepository
 	documentRepo     *repository.DocumentRepository
@@ -18,6 +19,7 @@ type ChatService struct {
 	config           *ChatConfig
 }
 
+// ChatConfig 聊天配置
 type ChatConfig struct {
 	OpenAIAPIKey     string
 	OpenAIBaseURL    string
@@ -25,6 +27,7 @@ type ChatConfig struct {
 	AnthropicBaseURL string
 }
 
+// NewChatService 创建聊天服务
 func NewChatService(conversationRepo *repository.ConversationRepository, documentRepo *repository.DocumentRepository, workDocumentRepo *repository.WorkDocumentRepository, ragService *rag.RAGService, config *ChatConfig) *ChatService {
 	return &ChatService{
 		conversationRepo: conversationRepo,

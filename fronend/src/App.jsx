@@ -1369,18 +1369,18 @@ function App() {
             metadataStart + metadataMarker.length,
             metadataEnd
           )
-            try {
-              const metadata = JSON.parse(metadataJSON)
-              if (metadata.document_id) {
-                documentID = metadata.document_id
+          try {
+            const metadata = JSON.parse(metadataJSON)
+            if (metadata.document_id) {
+              documentID = metadata.document_id
                 // v2.1: 如果是灵感模式且右侧面板显示的是最新AI响应，更新文档ID
                 if (isInspirationMode && rightPanelContentRef.current === null) {
                   setRightPanelDocumentId(documentID)
                 }
-              }
-            } catch (e) {
-              console.error('Failed to parse metadata:', e)
             }
+          } catch (e) {
+            console.error('Failed to parse metadata:', e)
+          }
           
           // 移除元数据标记，只保留实际内容
           finalContent = fullContent.substring(0, metadataStart)

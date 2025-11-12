@@ -8,10 +8,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// ConversationHandler 对话处理器
 type ConversationHandler struct {
 	service *ConversationService
 }
 
+// NewConversationHandler 创建对话处理器
 func NewConversationHandler(service *ConversationService) *ConversationHandler {
 	return &ConversationHandler{
 		service: service,

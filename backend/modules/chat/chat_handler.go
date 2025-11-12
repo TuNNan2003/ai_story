@@ -9,10 +9,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// ChatHandler 聊天处理器
 type ChatHandler struct {
 	chatService *ChatService
 }
 
+// NewChatHandler 创建聊天处理器
 func NewChatHandler(chatService *ChatService) *ChatHandler {
 	return &ChatHandler{
 		chatService: chatService,

@@ -395,10 +395,10 @@ function ChatContainer({ messages, onSendMessage, isLoading, models, selectedMod
                 />
               </div>
             ) : (
-              <InspirationMarkdownView
-                content={displayContent}
-                isLoading={rightPanelContent === null ? isLoading : false}
-              />
+            <InspirationMarkdownView
+              content={displayContent}
+              isLoading={rightPanelContent === null ? isLoading : false}
+            />
             )}
             {showActionBar && (
               <div className="inspiration-action-bar">

@@ -7,10 +7,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// ConversationListHandler 对话列表处理器
 type ConversationListHandler struct {
 	service *ConversationListService
 }
 
+// NewConversationListHandler 创建对话列表处理器
 func NewConversationListHandler(service *ConversationListService) *ConversationListHandler {
 	return &ConversationListHandler{
 		service: service,

@@ -6,11 +6,13 @@ import (
 	"grandma/backend/utils"
 )
 
+// ConversationService 对话服务
 type ConversationService struct {
 	conversationRepo *repository.ConversationRepository
 	documentRepo     *repository.DocumentRepository
 }
 
+// NewConversationService 创建对话服务
 func NewConversationService(conversationRepo *repository.ConversationRepository, documentRepo *repository.DocumentRepository) *ConversationService {
 	return &ConversationService{
 		conversationRepo: conversationRepo,

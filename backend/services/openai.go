@@ -10,11 +10,13 @@ import (
 	"net/http"
 )
 
+// OpenAIProvider OpenAI服务提供者
 type OpenAIProvider struct {
 	APIKey  string
 	BaseURL string
 }
 
+// NewOpenAIProvider 创建OpenAI服务提供者
 func NewOpenAIProvider(apiKey, baseURL string) *OpenAIProvider {
 	return &OpenAIProvider{
 		APIKey:  apiKey,

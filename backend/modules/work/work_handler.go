@@ -7,10 +7,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// WorkHandler 创作处理器
 type WorkHandler struct {
 	service *WorkService
 }
 
+// NewWorkHandler 创建创作处理器
 func NewWorkHandler(service *WorkService) *WorkHandler {
 	return &WorkHandler{
 		service: service,

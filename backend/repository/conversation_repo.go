@@ -7,10 +7,12 @@ import (
 	"gorm.io/gorm"
 )
 
+// ConversationRepository 对话仓库
 type ConversationRepository struct {
 	db *gorm.DB
 }
 
+// NewConversationRepository 创建对话仓库
 func NewConversationRepository(db *gorm.DB) *ConversationRepository {
 	return &ConversationRepository{db: db}
 }

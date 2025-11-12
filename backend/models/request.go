@@ -9,6 +9,7 @@ type ChatRequest struct {
 	Messages       []Message `json:"messages" binding:"required"`
 }
 
+// Message 消息结构体
 type Message struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`

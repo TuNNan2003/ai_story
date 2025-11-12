@@ -7,10 +7,12 @@ import (
 	"gorm.io/gorm"
 )
 
+// WorkDocumentRepository 创作文档仓库
 type WorkDocumentRepository struct {
 	db *gorm.DB
 }
 
+// NewWorkDocumentRepository 创建创作文档仓库
 func NewWorkDocumentRepository(db *gorm.DB) *WorkDocumentRepository {
 	return &WorkDocumentRepository{db: db}
 }
