@@ -36,6 +36,7 @@ function App() {
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false)
   const [inspirationDocumentViewOpen, setInspirationDocumentViewOpen] = useState(false)
   const [inspirationDocumentContent, setInspirationDocumentContent] = useState('')
+  const [rightPanelContent, setRightPanelContent] = useState(null) // 右侧面板显示的内容（null表示显示最新AI响应）
   const [historyWidth, setHistoryWidth] = useState(() => {
     // 从localStorage读取保存的宽度，默认260px
     const saved = localStorage.getItem('conversationHistoryWidth')
@@ -58,11 +59,17 @@ function App() {
   const readerRef = useRef(null)
   const abortControllerRef = useRef(null)
   const currentConversationIdRef = useRef(null)
+  const rightPanelContentRef = useRef(null)
   
   // 同步currentConversationId到ref，以便在异步函数中使用最新值
   useEffect(() => {
     currentConversationIdRef.current = currentConversationId
   }, [currentConversationId])
+  
+  // 同步rightPanelContent到ref，以便在异步函数中使用最新值
+  useEffect(() => {
+    rightPanelContentRef.current = rightPanelContent
+  }, [rightPanelContent])
 
   useEffect(() => {
     fetchModels()
@@ -389,6 +396,11 @@ function App() {
     // 清空之前的消息，避免显示旧数据
     setMessages([])
     
+    // v1.2: 切换对话时，重置右侧面板，让右侧显示新对话的最新响应
+    if (isInspirationMode) {
+      setRightPanelContent(null)
+    }
+    
     try {
       // 第一步：请求文档ID列表接口，获取这个对话的最新10个文档的ID
       // 后端返回的ID列表已经按时间正序排列（最早的在前，最新的在后）
@@ -449,6 +461,14 @@ function App() {
       // 设置消息（只显示最新10条）
       setMessages(conversationMessages)
       setIsHistoryView(true) // 加载历史对话后，设置为历史视图（不使用打字机效果）
+      
+      // v1.2: 在灵感模式下，如果最后一条消息是AI响应，自动在右侧显示
+      if (isInspirationMode) {
+        const lastMessage = conversationMessages[conversationMessages.length - 1]
+        if (lastMessage && lastMessage.role === 'assistant' && lastMessage.content) {
+          setRightPanelContent(lastMessage.content)
+        }
+      }
       
       // 重置加载状态（切换对话时，无论之前是否在加载，都应该重置）
       setIsLoading(false)
@@ -785,8 +805,8 @@ function App() {
 
   // 处理查看灵感模式下的文档
   const handleViewInspirationDocument = (documentId, content) => {
-    setInspirationDocumentContent(content || '')
-    setInspirationDocumentViewOpen(true)
+    // v1.2: 不再打开浮层，而是在右侧直接展示文档内容
+    setRightPanelContent(content || '')
   }
 
   // 创作相关处理函数
@@ -862,6 +882,11 @@ function App() {
 
     // 发送新消息时，切换到非历史视图（使用打字机效果）
     setIsHistoryView(false)
+    
+    // v1.2: 发送新消息时，重置右侧面板为null，这样右侧会自动显示新的AI响应
+    if (isInspirationMode) {
+      setRightPanelContent(null)
+    }
 
     // 首先获取或创建对话ID
     const conversationId = await getOrCreateConversationId()
@@ -995,6 +1020,10 @@ function App() {
             }
             return newMessages
           })
+          
+          // v1.2: 在灵感模式下，如果右侧面板显示的是最新响应（rightPanelContentRef.current为null）
+          // 注意：流式更新时不要设置rightPanelContent，让ChatContainer从lastAssistantContent获取内容
+          // 这样可以保持isLoading状态正确，打字机效果才能正常工作
         }
       }
       
@@ -1074,6 +1103,10 @@ function App() {
       // 清理引用
       readerRef.current = null
       abortControllerRef.current = null
+      
+      // v1.2: 在灵感模式下，流式响应结束后，如果右侧面板显示的是最新响应（rightPanelContentRef.current为null）
+      // 注意：不需要设置rightPanelContent，因为ChatContainer会从lastAssistantContent获取内容
+      // 这样可以保持打字机效果正常工作
       
       // 只有在新对话第一次发送消息时才刷新列表（更新标题）
       // 已存在的对话不需要刷新，因为用户已经在当前对话中
@@ -1199,6 +1232,7 @@ function App() {
           isModifyOriginal={isModifyOriginal}
           onModifyOriginalChange={setIsModifyOriginal}
           onViewDocument={handleViewInspirationDocument}
+          rightPanelContent={isInspirationMode ? rightPanelContent : null}
         />
         </div>
         {isInspirationMode && currentWorkId && (
@@ -1233,14 +1267,15 @@ function App() {
           setSelectedStory(null)
         }}
       />
-      <InspirationDocumentView
+      {/* v1.2: 不再使用InspirationDocumentView浮层，改为在右侧直接展示 */}
+      {/* <InspirationDocumentView
         isOpen={inspirationDocumentViewOpen}
         content={inspirationDocumentContent}
         onClose={() => {
           setInspirationDocumentViewOpen(false)
           setInspirationDocumentContent('')
         }}
-      />
+      /> */}
     </div>
   )
 }

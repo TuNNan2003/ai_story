@@ -4,7 +4,7 @@ import EnhancedInputArea from './EnhancedInputArea'
 import InspirationMarkdownView from './InspirationMarkdownView'
 import './ChatContainer.css'
 
-function ChatContainer({ messages, onSendMessage, isLoading, models, selectedModel, onModelChange, enableTypewriter = true, onLoadMore, canLoadMore, isLoadingMore, shouldScrollToBottom = false, isInspirationMode = false, currentWorkId = null, isModifyOriginal = false, onModifyOriginalChange, onViewDocument }) {
+function ChatContainer({ messages, onSendMessage, isLoading, models, selectedModel, onModelChange, enableTypewriter = true, onLoadMore, canLoadMore, isLoadingMore, shouldScrollToBottom = false, isInspirationMode = false, currentWorkId = null, isModifyOriginal = false, onModifyOriginalChange, onViewDocument, rightPanelContent = null }) {
   const containerRef = useRef(null)
   const [prevScrollHeight, setPrevScrollHeight] = useState(0)
   const [prevScrollTop, setPrevScrollTop] = useState(0)
@@ -284,6 +284,9 @@ function ChatContainer({ messages, onSendMessage, isLoading, models, selectedMod
   const lastAssistantMessage = messages.filter(m => m.role === 'assistant').slice(-1)[0]
   const lastAssistantContent = lastAssistantMessage?.content || ''
   const isLastMessageComplete = !isLoading && lastAssistantMessage && lastAssistantMessage.content.length > 0
+  
+  // v1.2: 如果rightPanelContent不为null，显示指定内容；否则显示最新AI响应
+  const displayContent = rightPanelContent !== null ? rightPanelContent : lastAssistantContent
 
   // 在灵感模式下，如果还没有对话，显示初始界面
   const hasConversation = messages.length > 0
@@ -320,8 +323,8 @@ function ChatContainer({ messages, onSendMessage, isLoading, models, selectedMod
           </div>
           <div className="inspiration-right">
             <InspirationMarkdownView
-              content={lastAssistantContent}
-              isLoading={isLoading}
+              content={displayContent}
+              isLoading={rightPanelContent === null ? isLoading : false}
             />
           </div>
         </div>

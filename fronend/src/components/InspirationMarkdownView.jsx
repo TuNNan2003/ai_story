@@ -24,15 +24,30 @@ function InspirationMarkdownView({ content, isLoading }) {
     // 如果内容在增长（流式更新），继续打字新部分
     if (content.startsWith(prevContentRef.current)) {
       const newTextStart = prevContentRef.current.length
+      // 如果当前显示的内容索引小于新内容的起始位置，更新到新内容的起始位置
       if (currentIndexRef.current < newTextStart) {
         currentIndexRef.current = newTextStart
         setDisplayedContent(content.slice(0, currentIndexRef.current))
       }
+      // 注意：不要在这里更新prevContentRef.current，它应该保持为上一次完整显示的内容
+      // 只有在打字完成或内容完全显示时才更新prevContentRef.current
     } else if (content === prevContentRef.current) {
       // 内容完全相同，不需要重新开始
       return
     } else {
       // 新内容，重新开始
+      // v1.2: 如果新内容不是流式更新（isLoading为false），立即显示完整内容
+      if (!isLoading) {
+        setDisplayedContent(content)
+        currentIndexRef.current = content.length
+        prevContentRef.current = content
+        if (timeoutIdRef.current) {
+          clearTimeout(timeoutIdRef.current)
+          timeoutIdRef.current = null
+        }
+        return
+      }
+      // 否则重新开始打字机效果
       setDisplayedContent('')
       currentIndexRef.current = 0
       prevContentRef.current = ''
@@ -49,6 +64,7 @@ function InspirationMarkdownView({ content, isLoading }) {
         currentIndexRef.current++
         timeoutIdRef.current = setTimeout(type, 20) // 打字机速度
       } else {
+        // 打字完成，更新prevContentRef
         prevContentRef.current = content
         timeoutIdRef.current = null
       }
@@ -69,7 +85,7 @@ function InspirationMarkdownView({ content, isLoading }) {
         timeoutIdRef.current = null
       }
     }
-  }, [content])
+  }, [content, isLoading])
 
   // 当内容加载完成时，立即显示完整内容
   useEffect(() => {
