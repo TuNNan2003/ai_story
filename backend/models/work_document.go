@@ -9,6 +9,8 @@ type WorkDocument struct {
 	UserID    string    `json:"user_id" gorm:"index"`     // 用户ID
 	Title     string    `json:"title"`                    // 文档标题
 	Content   string    `json:"content" gorm:"type:text"` // 文档内容
+	Role      string    `json:"role"`                     // 角色：user或assistant（v1.3：用于灵感模式对话）
+	Model     string    `json:"model"`                    // 使用的模型（v1.3：用于灵感模式对话）
 	CreatedAt time.Time `json:"created_at"`               // 创建时间
 	UpdatedAt time.Time `json:"updated_at"`               // 更新时间
 }

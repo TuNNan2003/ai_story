@@ -2,7 +2,8 @@ package models
 
 // ChatRequest 聊天请求
 type ChatRequest struct {
-	ConversationID string    `json:"conversation_id"` // 可选，如果为空则创建新对话
+	ConversationID string    `json:"conversation_id"` // 可选，如果为空则创建新对话（普通模式）
+	WorkID         string    `json:"work_id"`         // 可选，灵感模式下使用（v1.3）
 	Model          string    `json:"model" binding:"required"`
 	UserID         string    `json:"user_id" binding:"required"` // 用户ID
 	Messages       []Message `json:"messages" binding:"required"`

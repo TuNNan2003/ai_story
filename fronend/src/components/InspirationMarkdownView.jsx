@@ -10,7 +10,8 @@ function InspirationMarkdownView({ content, isLoading }) {
   const timeoutIdRef = useRef(null)
 
   useEffect(() => {
-    if (!content) {
+    // 如果内容为空且不在加载中，清空显示
+    if (!content && !isLoading) {
       setDisplayedContent('')
       prevContentRef.current = ''
       currentIndexRef.current = 0
@@ -18,6 +19,12 @@ function InspirationMarkdownView({ content, isLoading }) {
         clearTimeout(timeoutIdRef.current)
         timeoutIdRef.current = null
       }
+      return
+    }
+
+    // 如果内容为空但在加载中，显示等待提示（由组件内部处理）
+    if (!content && isLoading) {
+      // 保持当前状态，等待内容到达
       return
     }
 

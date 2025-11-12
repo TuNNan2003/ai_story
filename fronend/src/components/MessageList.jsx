@@ -61,16 +61,16 @@ function MessageList({ messages, isLoading, enableTypewriter = true, onLoadMore,
             <Message message={message} enableTypewriter={enableTypewriter} onAddToStory={message.onAddToStory} />
             {showCompleteIndicator && (
               <div className="message-complete-section">
-                <div className="message-complete-indicator">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path
-                      d="M13 4L6 11L3 8"
-                      stroke="rgba(16, 163, 127, 0.8)"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+              <div className="message-complete-indicator">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path
+                    d="M13 4L6 11L3 8"
+                    stroke="rgba(16, 163, 127, 0.8)"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
                   <span>我已完成创作，你可以提出后续问题或者要求进行改动</span>
                 </div>
                 {assistantMessage && onViewDocument && (

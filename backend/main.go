@@ -61,6 +61,7 @@ func main() {
 	chatSvc := chatService.NewChatService(
 		conversationRepo,
 		documentRepo,
+		workDocumentRepo,
 		&chatService.ChatConfig{
 			OpenAIAPIKey:     cfg.OpenAIAPIKey,
 			OpenAIBaseURL:    cfg.OpenAIBaseURL,

@@ -66,3 +66,29 @@ func (r *WorkDocumentRepository) UpdateContentByIDAndUserID(id, userID, content 
 func (r *WorkDocumentRepository) DeleteByIDAndUserID(id, userID string) error {
 	return r.db.Where("id = ? AND user_id = ?", id, userID).Delete(&models.WorkDocument{}).Error
 }
+
+// AppendContent 追加内容到文档（用于流式更新）
+func (r *WorkDocumentRepository) AppendContent(id string, content string) error {
+	var doc models.WorkDocument
+	err := r.db.Where("id = ?", id).First(&doc).Error
+	if err != nil {
+		return err
+	}
+	doc.Content = doc.Content + content
+	doc.UpdatedAt = time.Now()
+	return r.db.Save(&doc).Error
+}
+
+// GetLatestDocumentsByWorkID 获取创作的最新文档（按created_at倒序）
+func (r *WorkDocumentRepository) GetLatestDocumentsByWorkID(workID string, limit int) ([]models.WorkDocument, error) {
+	var documents []models.WorkDocument
+	query := r.db.Where("work_id = ?", workID).Order("created_at DESC")
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+	err := query.Find(&documents).Error
+	if err != nil {
+		return nil, err
+	}
+	return documents, nil
+}
