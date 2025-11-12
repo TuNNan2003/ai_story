@@ -6,6 +6,7 @@ import WorkHistory from './components/WorkHistory'
 import WorkDocumentList from './components/WorkDocumentList'
 import StoryEditDialog from './components/StoryEditDialog'
 import StoryViewDialog from './components/StoryViewDialog'
+import InspirationDocumentView from './components/InspirationDocumentView'
 import './App.css'
 
 function App() {
@@ -33,6 +34,8 @@ function App() {
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [hasMoreMessages, setHasMoreMessages] = useState(false)
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false)
+  const [inspirationDocumentViewOpen, setInspirationDocumentViewOpen] = useState(false)
+  const [inspirationDocumentContent, setInspirationDocumentContent] = useState('')
   const [historyWidth, setHistoryWidth] = useState(() => {
     // 从localStorage读取保存的宽度，默认260px
     const saved = localStorage.getItem('conversationHistoryWidth')
@@ -780,6 +783,12 @@ function App() {
     setStoryViewDialogOpen(true)
   }
 
+  // 处理查看灵感模式下的文档
+  const handleViewInspirationDocument = (documentId, content) => {
+    setInspirationDocumentContent(content || '')
+    setInspirationDocumentViewOpen(true)
+  }
+
   // 创作相关处理函数
   const handleNewWork = async () => {
     try {
@@ -1189,6 +1198,7 @@ function App() {
           currentWorkId={currentWorkId}
           isModifyOriginal={isModifyOriginal}
           onModifyOriginalChange={setIsModifyOriginal}
+          onViewDocument={handleViewInspirationDocument}
         />
         </div>
         {isInspirationMode && currentWorkId && (
@@ -1221,6 +1231,14 @@ function App() {
         onClose={() => {
           setStoryViewDialogOpen(false)
           setSelectedStory(null)
+        }}
+      />
+      <InspirationDocumentView
+        isOpen={inspirationDocumentViewOpen}
+        content={inspirationDocumentContent}
+        onClose={() => {
+          setInspirationDocumentViewOpen(false)
+          setInspirationDocumentContent('')
         }}
       />
     </div>

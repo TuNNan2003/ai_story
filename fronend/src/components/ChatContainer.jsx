@@ -4,7 +4,7 @@ import EnhancedInputArea from './EnhancedInputArea'
 import InspirationMarkdownView from './InspirationMarkdownView'
 import './ChatContainer.css'
 
-function ChatContainer({ messages, onSendMessage, isLoading, models, selectedModel, onModelChange, enableTypewriter = true, onLoadMore, canLoadMore, isLoadingMore, shouldScrollToBottom = false, isInspirationMode = false, currentWorkId = null, isModifyOriginal = false, onModifyOriginalChange }) {
+function ChatContainer({ messages, onSendMessage, isLoading, models, selectedModel, onModelChange, enableTypewriter = true, onLoadMore, canLoadMore, isLoadingMore, shouldScrollToBottom = false, isInspirationMode = false, currentWorkId = null, isModifyOriginal = false, onModifyOriginalChange, onViewDocument }) {
   const containerRef = useRef(null)
   const [prevScrollHeight, setPrevScrollHeight] = useState(0)
   const [prevScrollTop, setPrevScrollTop] = useState(0)
@@ -303,6 +303,7 @@ function ChatContainer({ messages, onSendMessage, isLoading, models, selectedMod
                 isLoadingMore={isLoadingMore}
                 isInspirationMode={true}
                 isLastMessageComplete={isLastMessageComplete}
+                onViewDocument={onViewDocument}
               />
             </div>
             <EnhancedInputArea
