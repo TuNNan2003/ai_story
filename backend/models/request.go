@@ -90,12 +90,24 @@ type WorkResponse struct {
 	Total int    `json:"total"`
 }
 
-// WorkDocumentRequest 创作文档请求
+// WorkDocumentRequest 创作文档请求（用于创建）
 type WorkDocumentRequest struct {
 	UserID  string `json:"user_id" binding:"required"` // 用户ID
 	WorkID  string `json:"work_id" binding:"required"` // 创作ID
 	Title   string `json:"title" binding:"required"`   // 文档标题
 	Content string `json:"content"`                    // 文档内容
+}
+
+// UpdateWorkDocumentTitleRequest 更新文档标题请求
+type UpdateWorkDocumentTitleRequest struct {
+	UserID string `json:"user_id" binding:"required"` // 用户ID
+	Title  string `json:"title" binding:"required"`   // 文档标题
+}
+
+// UpdateWorkDocumentContentRequest 更新文档内容请求
+type UpdateWorkDocumentContentRequest struct {
+	UserID  string `json:"user_id" binding:"required"` // 用户ID
+	Content string `json:"content" binding:"required"` // 文档内容
 }
 
 // WorkDocumentResponse 创作文档响应

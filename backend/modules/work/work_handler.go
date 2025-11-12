@@ -125,7 +125,7 @@ func (h *WorkHandler) CreateWorkDocument(c *gin.Context) {
 // UpdateWorkDocumentTitle 更新文档标题
 func (h *WorkHandler) UpdateWorkDocumentTitle(c *gin.Context) {
 	id := c.Param("id")
-	var req models.WorkDocumentRequest
+	var req models.UpdateWorkDocumentTitleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -142,7 +142,7 @@ func (h *WorkHandler) UpdateWorkDocumentTitle(c *gin.Context) {
 // UpdateWorkDocumentContent 更新文档内容
 func (h *WorkHandler) UpdateWorkDocumentContent(c *gin.Context) {
 	id := c.Param("id")
-	var req models.WorkDocumentRequest
+	var req models.UpdateWorkDocumentContentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

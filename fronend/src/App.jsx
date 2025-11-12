@@ -37,6 +37,7 @@ function App() {
   const [inspirationDocumentViewOpen, setInspirationDocumentViewOpen] = useState(false)
   const [inspirationDocumentContent, setInspirationDocumentContent] = useState('')
   const [rightPanelContent, setRightPanelContent] = useState(null) // 右侧面板显示的内容（null表示显示最新AI响应）
+  const [rightPanelDocumentId, setRightPanelDocumentId] = useState(null) // 右侧面板当前显示的文档ID（v2.1）
   const [historyWidth, setHistoryWidth] = useState(() => {
     // 从localStorage读取保存的宽度，默认260px
     const saved = localStorage.getItem('conversationHistoryWidth')
@@ -933,7 +934,9 @@ function App() {
   // 处理查看灵感模式下的文档
   const handleViewInspirationDocument = (documentId, content) => {
     // v1.2: 不再打开浮层，而是在右侧直接展示文档内容
+    // v2.1: 同时记录文档ID，以便编辑和保存
     setRightPanelContent(content || '')
+    setRightPanelDocumentId(documentId || null)
   }
 
   // 创作相关处理函数
@@ -966,8 +969,10 @@ function App() {
     }
 
     // v1.3: 切换创作时，清空之前的消息
+    // v2.1: 同时清空文档ID
     setMessages([])
     setRightPanelContent(null)
+    setRightPanelDocumentId(null)
     
     setCurrentWorkId(workId)
     await fetchWorkDocuments(workId)
@@ -1009,9 +1014,11 @@ function App() {
           setCurrentWorkId(null)
           setWorkDocuments([])
           // v1.3: 删除当前创作时，清空消息和右侧面板
+          // v2.1: 同时清空文档ID
           if (isInspirationMode) {
             setMessages([])
             setRightPanelContent(null)
+            setRightPanelDocumentId(null)
           }
         }
       }
@@ -1081,8 +1088,54 @@ function App() {
 
   const handleSelectDocument = async (doc) => {
     // v1.3: 选择文档时，在右侧显示文档内容
+    // v2.1: 同时记录文档ID，以便编辑和保存
     if (isInspirationMode) {
       setRightPanelContent(doc.content || '')
+      setRightPanelDocumentId(doc.id || null)
+    }
+  }
+
+  // v2.1: 保存文档内容
+  const handleSaveWorkDocument = async (documentId, content) => {
+    try {
+      const response = await fetch(`/api/work-documents/${documentId}/content`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          content: content,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || '保存失败')
+      }
+
+      // 更新本地状态
+      setRightPanelContent(content)
+      
+      // 刷新文档列表
+      if (currentWorkId) {
+        await fetchWorkDocuments(currentWorkId)
+      }
+
+      // 更新消息列表中的内容
+      setMessages((prev) => {
+        return prev.map(msg => {
+          if (msg.documentId === documentId) {
+            return { ...msg, content: content }
+          }
+          return msg
+        })
+      })
+
+      return true
+    } catch (error) {
+      console.error('Failed to save document:', error)
+      throw error
     }
   }
 
@@ -1100,8 +1153,10 @@ function App() {
     setIsHistoryView(false)
 
     // v1.2: 发送新消息时，重置右侧面板为null，这样右侧会自动显示新的AI响应
+    // v2.1: 同时清空文档ID
     if (isInspirationMode) {
       setRightPanelContent(null)
+      setRightPanelDocumentId(null)
     }
 
     // v1.3: 在灵感模式下，使用work_id；否则使用conversation_id
@@ -1215,6 +1270,7 @@ function App() {
       const decoder = new TextDecoder()
       let fullContent = ''
       let documentID = null // 保存后端返回的真实文档ID
+      let assistantMessageId = null // 保存助手消息的临时ID
       
       // 定义元数据标记（需要在循环外定义，以便在循环后使用）
       const metadataMarker = '<GRANDMA_METADATA>'
@@ -1249,6 +1305,10 @@ function App() {
               const metadata = JSON.parse(metadataJSON)
               if (metadata.document_id) {
                 documentID = metadata.document_id
+                // v2.1: 如果是灵感模式且右侧面板显示的是最新AI响应，更新文档ID
+                if (isInspirationMode && rightPanelContentRef.current === null) {
+                  setRightPanelDocumentId(documentID)
+                }
               }
             } catch (e) {
               console.error('Failed to parse metadata:', e)
@@ -1309,14 +1369,18 @@ function App() {
             metadataStart + metadataMarker.length,
             metadataEnd
           )
-          try {
-            const metadata = JSON.parse(metadataJSON)
-            if (metadata.document_id) {
-              documentID = metadata.document_id
+            try {
+              const metadata = JSON.parse(metadataJSON)
+              if (metadata.document_id) {
+                documentID = metadata.document_id
+                // v2.1: 如果是灵感模式且右侧面板显示的是最新AI响应，更新文档ID
+                if (isInspirationMode && rightPanelContentRef.current === null) {
+                  setRightPanelDocumentId(documentID)
+                }
+              }
+            } catch (e) {
+              console.error('Failed to parse metadata:', e)
             }
-          } catch (e) {
-            console.error('Failed to parse metadata:', e)
-          }
           
           // 移除元数据标记，只保留实际内容
           finalContent = fullContent.substring(0, metadataStart)
@@ -1341,6 +1405,11 @@ function App() {
           // 检查是否需要更新
           const needsUpdateDocumentId = documentID && lastMessage.documentId !== documentID
           const needsUpdateCallback = !lastMessage.onAddToStory
+          
+          // v2.1: 如果是灵感模式且右侧面板显示的是最新AI响应，更新文档ID
+          if (needsUpdateDocumentId && isInspirationMode && rightPanelContentRef.current === null) {
+            setRightPanelDocumentId(documentID)
+          }
           
           // 如果不需要更新，直接返回原数组（避免触发重新渲染）
           if (!needsUpdateDocumentId && !needsUpdateCallback) {
@@ -1378,6 +1447,10 @@ function App() {
       // v1.2: 在灵感模式下，流式响应结束后，如果右侧面板显示的是最新响应（rightPanelContentRef.current为null）
       // 注意：不需要设置rightPanelContent，因为ChatContainer会从lastAssistantContent获取内容
       // 这样可以保持打字机效果正常工作
+      // v2.1: 确保文档ID被正确设置（如果还没有设置）
+      if (isInspirationMode && documentID && rightPanelContentRef.current === null) {
+        setRightPanelDocumentId(documentID)
+      }
       
       // v1.3: 在灵感模式下，刷新workDocuments列表；在普通模式下，只有在新对话第一次发送消息时才刷新列表
       if (isInspirationMode) {
@@ -1519,6 +1592,8 @@ function App() {
           onModifyOriginalChange={setIsModifyOriginal}
           onViewDocument={handleViewInspirationDocument}
           rightPanelContent={isInspirationMode ? rightPanelContent : null}
+          rightPanelDocumentId={isInspirationMode ? rightPanelDocumentId : null}
+          onSaveWorkDocument={handleSaveWorkDocument}
         />
         </div>
         {isInspirationMode && currentWorkId && (

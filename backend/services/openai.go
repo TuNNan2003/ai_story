@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"grandma/backend/models"
 	"io"
+	"log"
 	"net/http"
 )
 
@@ -43,6 +44,7 @@ func (p *OpenAIProvider) ChatStream(messages []models.Message, writer io.Writer)
 	if err != nil {
 		return err
 	}
+	log.Printf("[OpenAiProvider ChatStream] payload: %s", string(jsonData))
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
