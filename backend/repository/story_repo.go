@@ -8,10 +8,12 @@ import (
 	"gorm.io/gorm"
 )
 
+// StoryRepository 故事仓库
 type StoryRepository struct {
 	db *gorm.DB
 }
 
+// NewStoryRepository 创建故事仓库
 func NewStoryRepository(db *gorm.DB) *StoryRepository {
 	return &StoryRepository{db: db}
 }

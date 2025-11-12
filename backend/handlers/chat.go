@@ -10,10 +10,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// ChatHandler 聊天处理器（旧版，已废弃）
 type ChatHandler struct {
 	config *config.Config
 }
 
+// NewChatHandler 创建聊天处理器（旧版，已废弃）
 func NewChatHandler(cfg *config.Config) *ChatHandler {
 	return &ChatHandler{
 		config: cfg,

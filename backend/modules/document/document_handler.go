@@ -8,10 +8,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// DocumentHandler 文档处理器
 type DocumentHandler struct {
 	service *DocumentService
 }
 
+// NewDocumentHandler 创建文档处理器
 func NewDocumentHandler(service *DocumentService) *DocumentHandler {
 	return &DocumentHandler{
 		service: service,

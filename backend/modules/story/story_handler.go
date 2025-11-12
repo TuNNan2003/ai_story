@@ -8,10 +8,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// StoryHandler 故事处理器
 type StoryHandler struct {
 	service *StoryService
 }
 
+// NewStoryHandler 创建故事处理器
 func NewStoryHandler(service *StoryService) *StoryHandler {
 	return &StoryHandler{
 		service: service,

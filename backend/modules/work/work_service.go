@@ -6,11 +6,13 @@ import (
 	"grandma/backend/utils"
 )
 
+// WorkService 创作服务
 type WorkService struct {
 	workRepo         *repository.WorkRepository
 	workDocumentRepo *repository.WorkDocumentRepository
 }
 
+// NewWorkService 创建创作服务
 func NewWorkService(workRepo *repository.WorkRepository, workDocumentRepo *repository.WorkDocumentRepository) *WorkService {
 	return &WorkService{
 		workRepo:         workRepo,

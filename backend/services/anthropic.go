@@ -9,11 +9,13 @@ import (
 	"net/http"
 )
 
+// AnthropicProvider Anthropic服务提供者
 type AnthropicProvider struct {
 	APIKey  string
 	BaseURL string
 }
 
+// NewAnthropicProvider 创建Anthropic服务提供者
 func NewAnthropicProvider(apiKey, baseURL string) *AnthropicProvider {
 	return &AnthropicProvider{
 		APIKey:  apiKey,

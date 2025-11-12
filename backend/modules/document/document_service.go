@@ -6,10 +6,12 @@ import (
 	"grandma/backend/utils"
 )
 
+// DocumentService 文档服务
 type DocumentService struct {
 	documentRepo *repository.DocumentRepository
 }
 
+// NewDocumentService 创建文档服务
 func NewDocumentService(documentRepo *repository.DocumentRepository) *DocumentService {
 	return &DocumentService{
 		documentRepo: documentRepo,

@@ -7,10 +7,12 @@ import (
 	"gorm.io/gorm"
 )
 
+// VectorChunkRepository 向量chunk仓库
 type VectorChunkRepository struct {
 	db *gorm.DB
 }
 
+// NewVectorChunkRepository 创建向量chunk仓库
 func NewVectorChunkRepository(db *gorm.DB) *VectorChunkRepository {
 	return &VectorChunkRepository{db: db}
 }

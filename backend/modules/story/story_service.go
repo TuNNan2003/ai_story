@@ -8,10 +8,12 @@ import (
 	"time"
 )
 
+// StoryService 故事服务
 type StoryService struct {
 	storyRepo *repository.StoryRepository
 }
 
+// NewStoryService 创建故事服务
 func NewStoryService(storyRepo *repository.StoryRepository) *StoryService {
 	return &StoryService{
 		storyRepo: storyRepo,

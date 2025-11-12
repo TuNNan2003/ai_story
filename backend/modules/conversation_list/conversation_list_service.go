@@ -8,11 +8,13 @@ import (
 	"strings"
 )
 
+// ConversationListService 对话列表服务
 type ConversationListService struct {
 	conversationRepo *repository.ConversationRepository
 	config           *TitleGenerationConfig
 }
 
+// TitleGenerationConfig 标题生成配置
 type TitleGenerationConfig struct {
 	OpenAIAPIKey     string
 	OpenAIBaseURL    string
@@ -21,6 +23,7 @@ type TitleGenerationConfig struct {
 	DefaultModel     string // 默认使用哪个模型生成标题
 }
 
+// NewConversationListService 创建对话列表服务
 func NewConversationListService(conversationRepo *repository.ConversationRepository, config *TitleGenerationConfig) *ConversationListService {
 	return &ConversationListService{
 		conversationRepo: conversationRepo,

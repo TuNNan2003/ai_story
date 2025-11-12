@@ -17,6 +17,7 @@ func GenerateDocumentID() string {
 	return generateID("doc")
 }
 
+// GenerateStoryId 生成故事ID
 func GenerateStoryId() string {
 	return generateID("story")
 }
