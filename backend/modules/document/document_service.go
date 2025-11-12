@@ -53,6 +53,11 @@ func (s *DocumentService) GetDocumentByID(id string) (*models.Document, error) {
 	return s.documentRepo.GetByID(id)
 }
 
+// GetDocumentByIDAndUserID 根据ID和用户ID获取文档（确保数据隔离）
+func (s *DocumentService) GetDocumentByIDAndUserID(id, userID string) (*models.Document, error) {
+	return s.documentRepo.GetByIDAndUserID(id, userID)
+}
+
 // UpdateDocument 更新文档
 func (s *DocumentService) UpdateDocument(document *models.Document) error {
 	return s.documentRepo.Update(document)
@@ -82,4 +87,9 @@ func (s *DocumentService) CreateDocument(conversationID, role, content, model st
 // GetDocumentIDsByConversationID 获取对话的文档ID列表（用于翻页）
 func (s *DocumentService) GetDocumentIDsByConversationID(conversationID string, beforeDocumentID string, limit int) ([]string, error) {
 	return s.documentRepo.GetDocumentIDsByConversationID(conversationID, beforeDocumentID, limit)
+}
+
+// GetDocumentIDsByConversationIDAndUserID 获取对话的文档ID列表（确保数据隔离）
+func (s *DocumentService) GetDocumentIDsByConversationIDAndUserID(conversationID, userID string, beforeDocumentID string, limit int) ([]string, error) {
+	return s.documentRepo.GetDocumentIDsByConversationIDAndUserID(conversationID, userID, beforeDocumentID, limit)
 }

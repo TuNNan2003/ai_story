@@ -42,18 +42,24 @@ func (s *ConversationService) UpdateConversation(conversation *models.Conversati
 }
 
 // UpdateConversationTitle 更新对话标题
-func (s *ConversationService) UpdateConversationTitle(id, title string) error {
-	return s.conversationRepo.UpdateTitle(id, title)
+func (s *ConversationService) UpdateConversationTitle(id, userID, title string) error {
+	return s.conversationRepo.UpdateTitleByIDAndUserID(id, userID, title)
 }
 
 // DeleteConversation 删除对话（包括关联的文档）
-func (s *ConversationService) DeleteConversation(id string) error {
-	// 先删除关联的文档
-	err := s.documentRepo.DeleteByConversationID(id)
+func (s *ConversationService) DeleteConversation(id, userID string) error {
+	// 先验证对话属于该用户
+	conversation, err := s.conversationRepo.GetByIDAndUserID(id, userID)
+	if err != nil {
+		return err
+	}
+
+	// 先删除关联的文档（需要验证用户ID）
+	// 注意：这里需要确保文档也属于该用户
+	err = s.documentRepo.DeleteByConversationID(conversation.ID)
 	if err != nil {
 		return err
 	}
 	// 再删除对话
-	return s.conversationRepo.Delete(id)
+	return s.conversationRepo.DeleteByIDAndUserID(id, userID)
 }
-

@@ -41,6 +41,7 @@ func (s *ChatService) SendMessage(req *models.ChatRequest, writer io.Writer) (st
 		conversationID = utils.GenerateConversationID()
 		conversation = &models.Conversation{
 			ID:          conversationID,
+			UserID:      req.UserID,
 			Title:       s.generateTitle(req.Messages),
 			DocumentIDs: "",
 		}
@@ -50,7 +51,8 @@ func (s *ChatService) SendMessage(req *models.ChatRequest, writer io.Writer) (st
 		}
 	} else {
 		conversationID = req.ConversationID
-		conversation, err = s.conversationRepo.GetByID(conversationID)
+		// 验证对话属于该用户
+		conversation, err = s.conversationRepo.GetByIDAndUserID(conversationID, req.UserID)
 		if err != nil {
 			return "", "", err
 		}
@@ -63,6 +65,7 @@ func (s *ChatService) SendMessage(req *models.ChatRequest, writer io.Writer) (st
 	// 优化：只加载最近的对话上下文，而不是全部历史
 	if req.ConversationID != "" {
 		// 获取对话的历史文档（只获取最近的20条，避免上下文过长）
+		// 注意：这里不需要用户ID过滤，因为conversationID已经通过用户ID验证了
 		historyDocs, err := s.documentRepo.GetLatestDocumentsByConversationID(conversationID, 20)
 		if err == nil && len(historyDocs) > 0 {
 			// 反转顺序，使其按时间正序排列（最新的在最后）
@@ -95,6 +98,7 @@ func (s *ChatService) SendMessage(req *models.ChatRequest, writer io.Writer) (st
 			userDocID = utils.GenerateDocumentID()
 			userDoc := &models.Document{
 				ID:             userDocID,
+				UserID:         req.UserID,
 				ConversationID: conversationID,
 				Role:           "user",
 				Content:        lastMsg.Content,
@@ -128,6 +132,7 @@ func (s *ChatService) SendMessage(req *models.ChatRequest, writer io.Writer) (st
 	assistantDocID := utils.GenerateDocumentID()
 	assistantDoc := &models.Document{
 		ID:             assistantDocID,
+		UserID:         req.UserID,
 		ConversationID: conversationID,
 		Role:           "assistant",
 		Content:        "",

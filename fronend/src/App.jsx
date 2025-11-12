@@ -29,6 +29,18 @@ function App() {
     return saved ? parseInt(saved, 10) : 260
   })
   
+  // 用户ID：从localStorage获取或生成新的，确保多次打开网页时ID一致
+  const [userId, setUserId] = useState(() => {
+    const saved = localStorage.getItem('grandma_user_id')
+    if (saved) {
+      return saved
+    }
+    // 生成新的用户ID（使用时间戳和随机数）
+    const newUserId = 'user_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15)
+    localStorage.setItem('grandma_user_id', newUserId)
+    return newUserId
+  })
+  
   // 用于跟踪当前的流式响应读取器，以便在切换对话时取消
   const readerRef = useRef(null)
   const abortControllerRef = useRef(null)
@@ -45,8 +57,15 @@ function App() {
     fetchStories()
   }, [])
 
+  // 辅助函数：为URL添加用户ID参数
+  const addUserIdToUrl = (url) => {
+    const separator = url.includes('?') ? '&' : '?'
+    return `${url}${separator}user_id=${encodeURIComponent(userId)}`
+  }
+
   const fetchModels = async () => {
     try {
+      // models接口不需要用户ID，因为模型列表是全局的
       const response = await fetch('/api/models')
       const data = await response.json()
       setModels(data.models)
@@ -60,7 +79,7 @@ function App() {
 
   const fetchConversations = async () => {
     try {
-      const response = await fetch('/api/conversations?page=1&page_size=50')
+      const response = await fetch(addUserIdToUrl('/api/conversations?page=1&page_size=50'))
       const data = await response.json()
       setConversations(data.conversations || [])
     } catch (error) {
@@ -70,7 +89,7 @@ function App() {
 
   const fetchStories = async () => {
     try {
-      const response = await fetch('/api/stories?guid=default')
+      const response = await fetch(addUserIdToUrl('/api/stories?guid=default'))
       const data = await response.json()
       setStories(data.stories || [])
     } catch (error) {
@@ -99,6 +118,7 @@ function App() {
                 },
                 body: JSON.stringify({
                   user_inputs: userInputs,
+                  user_id: userId,
                 }),
               })
 
@@ -117,6 +137,12 @@ function App() {
       // 创建新对话
       const response = await fetch('/api/conversations/new', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+        }),
       })
 
       if (response.ok) {
@@ -133,13 +159,14 @@ function App() {
 
   const handleRenameConversation = async (conversationId, newTitle) => {
     try {
-      const response = await fetch(`/api/conversations/${conversationId}/title`, {
+      const response = await fetch(addUserIdToUrl(`/api/conversations/${conversationId}/title`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           title: newTitle,
+          user_id: userId,
         }),
       })
       if (response.ok) {
@@ -152,7 +179,7 @@ function App() {
 
   const handleDeleteConversation = async (conversationId) => {
     try {
-      const response = await fetch(`/api/conversations/${conversationId}`, {
+      const response = await fetch(addUserIdToUrl(`/api/conversations/${conversationId}`), {
         method: 'DELETE',
       })
       if (response.ok) {
@@ -178,11 +205,11 @@ function App() {
     while (hasMore) {
       try {
         // 获取文档ID列表
-        const url = beforeID
+        const baseUrl = beforeID
           ? `/api/documents/ids?conversation_id=${convId}&before_id=${beforeID}&limit=100`
           : `/api/documents/ids?conversation_id=${convId}&limit=100`
         
-        const idsResponse = await fetch(url)
+        const idsResponse = await fetch(addUserIdToUrl(baseUrl))
         if (!idsResponse.ok) {
           break
         }
@@ -197,7 +224,7 @@ function App() {
 
         // 并发请求所有文档的详细信息
         const documentPromises = documentIDs.map(id =>
-          fetch(`/api/documents/${id}`)
+          fetch(addUserIdToUrl(`/api/documents/${id}`))
             .then(response => {
               if (!response.ok) {
                 throw new Error(`Failed to get document ${id}`)
@@ -293,6 +320,7 @@ function App() {
               },
               body: JSON.stringify({
                 user_inputs: userInputs,
+                user_id: userId,
               }),
             })
 
@@ -317,7 +345,7 @@ function App() {
     try {
       // 第一步：请求文档ID列表接口，获取这个对话的最新10个文档的ID
       // 后端返回的ID列表已经按时间正序排列（最早的在前，最新的在后）
-      const idsResponse = await fetch(`/api/documents/ids?conversation_id=${conversationId}&limit=10`)
+      const idsResponse = await fetch(addUserIdToUrl(`/api/documents/ids?conversation_id=${conversationId}&limit=10`))
       if (!idsResponse.ok) {
         throw new Error('Failed to get document IDs')
       }
@@ -335,7 +363,7 @@ function App() {
       // 第二步：并发请求文档管理模块，同时发送多个请求，每个请求获取一个文档的详细信息
       // 注意：这里只获取最新10条文档，不会获取全部对话
       const documentPromises = documentIDs.map(id =>
-        fetch(`/api/documents/${id}`)
+        fetch(addUserIdToUrl(`/api/documents/${id}`))
           .then(response => {
             if (!response.ok) {
               throw new Error(`Failed to get document ${id}`)
@@ -390,7 +418,7 @@ function App() {
           if (currentConversationIdRef.current === conversationId) {
             try {
               // 重新获取文档ID列表
-              const refreshIdsResponse = await fetch(`/api/documents/ids?conversation_id=${conversationId}&limit=10`)
+              const refreshIdsResponse = await fetch(addUserIdToUrl(`/api/documents/ids?conversation_id=${conversationId}&limit=10`))
               if (refreshIdsResponse.ok) {
                 const refreshIdsData = await refreshIdsResponse.json()
                 const refreshDocumentIDs = refreshIdsData.document_ids || []
@@ -401,7 +429,7 @@ function App() {
                      refreshDocumentIDs[refreshDocumentIDs.length - 1] !== documentIDs[documentIDs.length - 1])) {
                   // 重新加载文档
                   const refreshDocumentPromises = refreshDocumentIDs.map(id =>
-                    fetch(`/api/documents/${id}`)
+                    fetch(addUserIdToUrl(`/api/documents/${id}`))
                       .then(response => {
                         if (!response.ok) {
                           throw new Error(`Failed to get document ${id}`)
@@ -474,7 +502,7 @@ function App() {
     try {
       // 第一步：获取比earliestDocId更早的文档ID列表
       const idsResponse = await fetch(
-        `/api/documents/ids?conversation_id=${currentConversationId}&before_id=${earliestDocId}&limit=10`
+        addUserIdToUrl(`/api/documents/ids?conversation_id=${currentConversationId}&before_id=${earliestDocId}&limit=10`)
       )
 
       if (!idsResponse.ok) {
@@ -489,7 +517,7 @@ function App() {
 
       // 第二步：并发请求文档管理模块，同时发送多个请求，每个请求获取一个文档的详细信息
       const documentPromises = idsData.document_ids.map(id =>
-        fetch(`/api/documents/${id}`)
+        fetch(addUserIdToUrl(`/api/documents/${id}`))
           .then(response => {
             if (!response.ok) {
               throw new Error(`Failed to get document ${id}`)
@@ -546,6 +574,12 @@ function App() {
     try {
       const response = await fetch('/api/conversations/new', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+        }),
       })
       if (response.ok) {
         const data = await response.json()
@@ -586,7 +620,7 @@ function App() {
   const handleAddToStory = async (documentId) => {
     try {
       // 获取文档内容
-      const docResponse = await fetch(`/api/documents/${documentId}`)
+      const docResponse = await fetch(addUserIdToUrl(`/api/documents/${documentId}`))
       if (!docResponse.ok) {
         throw new Error('Failed to get document')
       }
@@ -625,6 +659,7 @@ function App() {
         title: title,
         content: content,
         content_hash: contentHash,
+        user_id: userId,
       }
 
       // 只有在创建时才需要document_id
@@ -633,7 +668,7 @@ function App() {
         requestBody.guid = 'default'
       }
 
-      const response = await fetch(url, {
+      const response = await fetch(addUserIdToUrl(url), {
         method: method,
         headers: {
           'Content-Type': 'application/json',
@@ -678,7 +713,7 @@ function App() {
 
   const handleDeleteStory = async (story) => {
     try {
-      const response = await fetch(`/api/stories/${story.id}`, {
+      const response = await fetch(addUserIdToUrl(`/api/stories/${story.id}`), {
         method: 'DELETE',
       })
 
@@ -698,7 +733,7 @@ function App() {
   const handleSelectStory = async (story) => {
     // 当选择故事时，加载对应的文档内容
     try {
-      const docResponse = await fetch(`/api/documents/${story.document_id}`)
+      const docResponse = await fetch(addUserIdToUrl(`/api/documents/${story.document_id}`))
       if (docResponse.ok) {
         const doc = await docResponse.json()
         // 显示故事内容（可以创建一个新的消息显示）
@@ -759,6 +794,7 @@ function App() {
         body: JSON.stringify({
           conversation_id: conversationId,
           model: selectedModel,
+          user_id: userId,
           messages: [
             {
               role: 'user',

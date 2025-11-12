@@ -3,7 +3,6 @@ package conversation_list
 import (
 	"grandma/backend/models"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -20,10 +19,22 @@ func NewConversationListHandler(service *ConversationListService) *ConversationL
 
 // GetConversationList 获取对话列表
 func (h *ConversationListHandler) GetConversationList(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	var req models.ConversationListRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
-	response, err := h.service.GetConversationList(page, pageSize)
+	page := req.Page
+	if page <= 0 {
+		page = 1
+	}
+	pageSize := req.PageSize
+	if pageSize <= 0 {
+		pageSize = 20
+	}
+
+	response, err := h.service.GetConversationList(req.UserID, page, pageSize)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -34,7 +45,15 @@ func (h *ConversationListHandler) GetConversationList(c *gin.Context) {
 
 // CreateNewConversation 创建新对话
 func (h *ConversationListHandler) CreateNewConversation(c *gin.Context) {
-	conversation, err := h.service.CreateNewConversation()
+	var req struct {
+		UserID string `json:"user_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	conversation, err := h.service.CreateNewConversation(req.UserID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -51,7 +70,7 @@ func (h *ConversationListHandler) CreateNewConversationWithTitle(c *gin.Context)
 		return
 	}
 
-	conversation, err := h.service.CreateNewConversationWithTitle(req.UserInputs)
+	conversation, err := h.service.CreateNewConversationWithTitle(req.UserID, req.UserInputs)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
