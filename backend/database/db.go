@@ -25,6 +25,7 @@ func InitDB(dbPath string) error {
 		&models.Story{},
 		&models.Work{},
 		&models.WorkDocument{},
+		&models.VectorChunk{},
 	)
 	if err != nil {
 		return err

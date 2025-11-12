@@ -4,7 +4,7 @@ import EnhancedInputArea from './EnhancedInputArea'
 import InspirationMarkdownView from './InspirationMarkdownView'
 import './ChatContainer.css'
 
-function ChatContainer({ messages, onSendMessage, isLoading, models, selectedModel, onModelChange, enableTypewriter = true, onLoadMore, canLoadMore, isLoadingMore, shouldScrollToBottom = false, isInspirationMode = false, currentWorkId = null, isModifyOriginal = false, onModifyOriginalChange, onViewDocument, rightPanelContent = null }) {
+function ChatContainer({ messages, onSendMessage, isLoading, models, selectedModel, onModelChange, enableTypewriter = true, onLoadMore, canLoadMore, isLoadingMore, shouldScrollToBottom = false, isInspirationMode = false, currentWorkId = null, isModifyOriginal = false, onModifyOriginalChange, onViewDocument, rightPanelContent = null, rightPanelDocumentId = null, onSaveWorkDocument }) {
   const containerRef = useRef(null)
   const [prevScrollHeight, setPrevScrollHeight] = useState(0)
   const [prevScrollTop, setPrevScrollTop] = useState(0)
@@ -280,6 +280,11 @@ function ChatContainer({ messages, onSendMessage, isLoading, models, selectedMod
     lastMessageIdsRef.current = currentMessageIds
   }, [messages, isLoadingMore])
 
+  // v2.1: 编辑状态管理
+  const [isEditing, setIsEditing] = useState(false)
+  const [editedContent, setEditedContent] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+
   // 获取最后一条AI响应的内容（用于右侧Markdown渲染）
   const lastAssistantMessage = messages.filter(m => m.role === 'assistant').slice(-1)[0]
   const lastAssistantContent = lastAssistantMessage?.content || ''
@@ -288,8 +293,66 @@ function ChatContainer({ messages, onSendMessage, isLoading, models, selectedMod
   // v1.2: 如果rightPanelContent不为null，显示指定内容；否则显示最新AI响应
   const displayContent = rightPanelContent !== null ? rightPanelContent : lastAssistantContent
 
+  // v2.1: 当内容变化时，同步到编辑内容
+  useEffect(() => {
+    if (!isEditing) {
+      setEditedContent(displayContent)
+    }
+  }, [displayContent, isEditing])
+
   // 在灵感模式下，如果还没有对话，显示初始界面
   const hasConversation = messages.length > 0
+
+  // v2.1: 处理编辑按钮点击
+  const handleEdit = () => {
+    setIsEditing(true)
+    setEditedContent(displayContent)
+  }
+
+  // v2.1: 处理保存按钮点击
+  const handleSave = async () => {
+    if (!onSaveWorkDocument) {
+      console.error('Cannot save: missing save handler')
+      return
+    }
+
+    // 尝试获取文档ID：优先使用rightPanelDocumentId，如果没有则从最后一条消息中获取
+    let documentId = rightPanelDocumentId
+    if (!documentId && lastAssistantMessage && lastAssistantMessage.documentId) {
+      documentId = lastAssistantMessage.documentId
+    }
+
+    if (!documentId) {
+      console.error('Cannot save: missing document ID')
+      alert('无法保存：缺少文档ID')
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      await onSaveWorkDocument(documentId, editedContent)
+      setIsEditing(false)
+      // 如果rightPanelDocumentId之前为null，现在应该更新它
+      if (!rightPanelDocumentId && lastAssistantMessage) {
+        // 注意：这里不能直接设置rightPanelDocumentId，因为它是一个prop
+        // 但保存成功后，App.jsx会更新消息列表，documentId应该已经被设置
+      }
+    } catch (error) {
+      alert('保存失败：' + error.message)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // v2.1: 处理退出按钮点击
+  const handleExit = () => {
+    setIsEditing(false)
+    setEditedContent(displayContent) // 恢复原始内容
+  }
+
+  // v2.1: 判断是否显示按钮栏（AI响应完成或选择了文档，且不在编辑状态时显示编辑按钮，编辑状态时显示保存和退出按钮）
+  // 注意：只有在有文档ID或AI响应完成时才显示按钮栏
+  const showActionBar = isInspirationMode && hasConversation && displayContent && (isLastMessageComplete || rightPanelDocumentId !== null)
 
   return (
     <div className={`chat-container ${isInspirationMode && hasConversation ? 'inspiration-mode' : ''}`}>
@@ -322,10 +385,41 @@ function ChatContainer({ messages, onSendMessage, isLoading, models, selectedMod
             />
           </div>
           <div className="inspiration-right">
-            <InspirationMarkdownView
-              content={displayContent}
-              isLoading={rightPanelContent === null ? isLoading : false}
-            />
+            {isEditing ? (
+              <div className="inspiration-edit-container">
+                <textarea
+                  className="inspiration-edit-textarea"
+                  value={editedContent}
+                  onChange={(e) => setEditedContent(e.target.value)}
+                  placeholder="编辑文档内容..."
+                />
+              </div>
+            ) : (
+              <InspirationMarkdownView
+                content={displayContent}
+                isLoading={rightPanelContent === null ? isLoading : false}
+              />
+            )}
+            {showActionBar && (
+              <div className="inspiration-action-bar">
+                <button
+                  className="inspiration-action-btn inspiration-action-btn-save"
+                  onClick={handleSave}
+                  disabled={isSaving || !isEditing}
+                  title="保存"
+                >
+                  {isSaving ? '保存中...' : '保存'}
+                </button>
+                <button
+                  className="inspiration-action-btn inspiration-action-btn-edit"
+                  onClick={isEditing ? handleExit : handleEdit}
+                  disabled={isSaving}
+                  title={isEditing ? '退出编辑' : '编辑'}
+                >
+                  {isEditing ? '退出' : '编辑'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       ) : (

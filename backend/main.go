@@ -11,9 +11,11 @@ import (
 	conversationListService "grandma/backend/modules/conversation_list"
 	documentHandler "grandma/backend/modules/document"
 	documentService "grandma/backend/modules/document"
+	"grandma/backend/modules/rag"
 	"grandma/backend/modules/story"
 	"grandma/backend/modules/work"
 	"grandma/backend/repository"
+	"grandma/backend/services"
 	"log"
 
 	"github.com/gin-gonic/gin"
@@ -56,12 +58,31 @@ func main() {
 	storyRepo := repository.NewStoryRepository(database.DB)
 	workRepo := repository.NewWorkRepository(database.DB)
 	workDocumentRepo := repository.NewWorkDocumentRepository(database.DB)
+	vectorChunkRepo := repository.NewVectorChunkRepository(database.DB)
+
+	// 创建RAG服务
+	var ragSvc *rag.RAGService
+	if cfg.EnableRAG && cfg.OpenAIAPIKey != "" {
+		embeddingSvc := services.NewEmbeddingService(cfg.EmbeddingAPIKey, cfg.EmbeddingBaseURL, cfg.EmbeddingModel)
+		ragSvc = rag.NewRAGService(&rag.RAGConfig{
+			Enabled:          true,
+			EmbeddingService: embeddingSvc,
+			VectorChunkRepo:  vectorChunkRepo,
+			DocumentRepo:     documentRepo,
+			WorkDocumentRepo: workDocumentRepo,
+		})
+		log.Println("RAG service initialized")
+	} else {
+		ragSvc = rag.NewRAGService(&rag.RAGConfig{Enabled: false})
+		log.Println("RAG service disabled")
+	}
 
 	// 创建Services
 	chatSvc := chatService.NewChatService(
 		conversationRepo,
 		documentRepo,
 		workDocumentRepo,
+		ragSvc,
 		&chatService.ChatConfig{
 			OpenAIAPIKey:     cfg.OpenAIAPIKey,
 			OpenAIBaseURL:    cfg.OpenAIBaseURL,
@@ -140,8 +161,8 @@ func main() {
 		// 获取可用模型列表
 		api.GET("/models", func(c *gin.Context) {
 			models := []map[string]string{
-				{"id": "openai", "name": "GPT-3.5 Turbo", "provider": "OpenAI"},
-				{"id": "anthropic", "name": "Claude 3.5 Sonnet", "provider": "Anthropic"},
+				{"id": "openai", "name": "DeepSeek Chat", "provider": "OpenAI"},
+				{"id": "anthropic", "name": "Kimi", "provider": "Anthropic"},
 			}
 			c.JSON(200, gin.H{"models": models})
 		})
