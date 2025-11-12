@@ -5,6 +5,7 @@ import "time"
 // Conversation 对话模型
 type Conversation struct {
 	ID          string     `json:"id" gorm:"primaryKey"`
+	UserID      string     `json:"user_id" gorm:"index"`                       // 用户ID
 	Title       string     `json:"title"`                                      // 对话标题
 	DocumentIDs string     `json:"document_ids" gorm:"type:text"`              // 文档ID列表，按顺序排列，用逗号分隔
 	CreatedAt   time.Time  `json:"created_at"`                                 // 创建时间

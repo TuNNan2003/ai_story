@@ -23,6 +23,8 @@ func InitDB(dbPath string) error {
 		&models.Conversation{},
 		&models.Document{},
 		&models.Story{},
+		&models.Work{},
+		&models.WorkDocument{},
 	)
 	if err != nil {
 		return err

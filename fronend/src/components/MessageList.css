@@ -153,3 +153,58 @@
   }
 }
 
+.message-complete-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px 0 4px auto;
+  max-width: 768px;
+  margin-left: auto;
+  margin-right: 20px;
+}
+
+.message-complete-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  color: rgba(16, 163, 127, 0.8);
+  font-size: 12px;
+  background-color: rgba(16, 163, 127, 0.1);
+  border-radius: 6px;
+  width: fit-content;
+}
+
+.message-view-document-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  color: rgba(236, 236, 241, 0.9);
+  font-size: 13px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  width: fit-content;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+}
+
+.message-view-document-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ececf1;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.message-view-document-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.message-view-document-btn svg {
+  flex-shrink: 0;
+}
+

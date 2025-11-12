@@ -46,7 +46,13 @@ func (h *DocumentHandler) GetDocumentList(c *gin.Context) {
 func (h *DocumentHandler) GetDocumentByID(c *gin.Context) {
 	fmt.Println("[document_handler GetDocumentByID] Start")
 	id := c.Param("id")
-	doc, err := h.service.GetDocumentByID(id)
+	userID := c.Query("user_id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id is required"})
+		return
+	}
+
+	doc, err := h.service.GetDocumentByIDAndUserID(id, userID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Document not found"})
 		return
@@ -99,7 +105,7 @@ func (h *DocumentHandler) GetDocumentIDs(c *gin.Context) {
 		limit = 10
 	}
 
-	documentIDs, err := h.service.GetDocumentIDsByConversationID(req.ConversationID, req.BeforeID, limit)
+	documentIDs, err := h.service.GetDocumentIDsByConversationIDAndUserID(req.ConversationID, req.UserID, req.BeforeID, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

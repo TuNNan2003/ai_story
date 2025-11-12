@@ -4,6 +4,7 @@ import "time"
 
 type Story struct {
 	ID          string    `json:"id" gorm:"primaryKey"`
+	UserID      string    `json:"user_id" gorm:"index"` // 用户ID
 	DocumentID  string    `json:"document_id"`
 	Guid        string    `json:"guid"`
 	Title       string    `json:"title"`

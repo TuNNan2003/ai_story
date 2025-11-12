@@ -1,0 +1,234 @@
+.inspiration-document-view-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.inspiration-document-view {
+  background-color: rgba(32, 33, 35, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  width: 80%;
+  max-width: 1000px;
+  max-height: 90vh;
+  height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.inspiration-document-view-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.inspiration-document-view-title {
+  color: #ececf1;
+  font-size: 18px;
+  font-weight: 500;
+  margin: 0;
+}
+
+.inspiration-document-view-close-btn {
+  background: transparent;
+  border: none;
+  color: rgba(236, 236, 241, 0.7);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.inspiration-document-view-close-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ececf1;
+}
+
+.inspiration-document-view-body {
+  padding: 24px;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.inspiration-document-view-content {
+  color: #ececf1;
+  line-height: 1.8;
+  font-size: 15px;
+}
+
+.inspiration-document-view-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: rgba(236, 236, 241, 0.5);
+  font-size: 14px;
+}
+
+/* Markdown 样式 */
+.inspiration-document-view-content h1,
+.inspiration-document-view-content h2,
+.inspiration-document-view-content h3,
+.inspiration-document-view-content h4,
+.inspiration-document-view-content h5,
+.inspiration-document-view-content h6 {
+  color: #ececf1;
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+.inspiration-document-view-content h1 {
+  font-size: 28px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 8px;
+}
+
+.inspiration-document-view-content h2 {
+  font-size: 24px;
+}
+
+.inspiration-document-view-content h3 {
+  font-size: 20px;
+}
+
+.inspiration-document-view-content p {
+  margin-bottom: 16px;
+  color: rgba(236, 236, 241, 0.9);
+}
+
+.inspiration-document-view-content ul,
+.inspiration-document-view-content ol {
+  margin-bottom: 16px;
+  padding-left: 24px;
+  color: rgba(236, 236, 241, 0.9);
+}
+
+.inspiration-document-view-content li {
+  margin-bottom: 8px;
+}
+
+.inspiration-document-view-content code {
+  background-color: rgba(0, 0, 0, 0.3);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  color: #f9a825;
+}
+
+.inspiration-document-view-content pre {
+  background-color: rgba(0, 0, 0, 0.4);
+  padding: 16px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin-bottom: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.inspiration-document-view-content pre code {
+  background-color: transparent;
+  padding: 0;
+  color: #ececf1;
+}
+
+.inspiration-document-view-content blockquote {
+  border-left: 4px solid rgba(255, 255, 255, 0.3);
+  padding-left: 16px;
+  margin: 16px 0;
+  color: rgba(236, 236, 241, 0.8);
+  font-style: italic;
+}
+
+.inspiration-document-view-content a {
+  color: rgba(59, 130, 246, 0.9);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.inspiration-document-view-content a:hover {
+  color: rgba(59, 130, 246, 1);
+  text-decoration: underline;
+}
+
+.inspiration-document-view-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+}
+
+.inspiration-document-view-content th,
+.inspiration-document-view-content td {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.inspiration-document-view-content th {
+  background-color: rgba(255, 255, 255, 0.05);
+  font-weight: 600;
+}
+
+.inspiration-document-view-content hr {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 24px 0;
+}
+
+.inspiration-document-view-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.inspiration-document-view-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.inspiration-document-view-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.inspiration-document-view-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+

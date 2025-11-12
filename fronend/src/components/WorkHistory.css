@@ -1,0 +1,242 @@
+/* 复用 ConversationHistory 的样式，稍作调整 */
+.work-history {
+  width: 260px;
+  background-color: rgba(32, 33, 35, 0.95);
+  backdrop-filter: blur(10px);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.work-history.collapsed {
+  width: 40px;
+}
+
+.work-history-header {
+  padding: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+.work-history-header:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.work-history-title {
+  color: #ececf1;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+.collapse-icon {
+  color: rgba(236, 236, 241, 0.6);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.collapse-icon.collapsed {
+  transform: rotate(-90deg);
+}
+
+.work-history-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.new-work-button {
+  width: 100%;
+  padding: 10px 14px;
+  margin: 8px 0;
+  background-color: rgba(16, 163, 127, 0.1);
+  border: 1px solid rgba(16, 163, 127, 0.3);
+  border-radius: 10px;
+  color: rgba(16, 163, 127, 0.9);
+  font-size: 14px;
+  font-weight: 400;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.new-work-button:hover {
+  background-color: rgba(16, 163, 127, 0.15);
+  border-color: rgba(16, 163, 127, 0.4);
+}
+
+.work-history-empty {
+  padding: 20px;
+  text-align: center;
+  color: rgba(236, 236, 241, 0.5);
+  font-size: 14px;
+}
+
+.work-item {
+  padding: 12px 14px;
+  margin: 2px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.work-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.work-item.active {
+  background-color: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.work-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.work-item-title {
+  color: #ececf1;
+  font-size: 14px;
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+
+.work-item-time {
+  color: rgba(236, 236, 241, 0.5);
+  font-size: 12px;
+}
+
+.work-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.work-item:hover .work-item-actions {
+  opacity: 1;
+}
+
+.work-item-rename-btn,
+.work-item-delete-btn {
+  background: transparent;
+  border: none;
+  color: rgba(236, 236, 241, 0.6);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.work-item-rename-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: rgba(236, 236, 241, 0.9);
+}
+
+.work-item-delete-btn:hover {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: rgba(239, 68, 68, 0.9);
+}
+
+.work-item-edit {
+  width: 100%;
+}
+
+.work-item-edit-input {
+  width: 100%;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: #ececf1;
+  font-size: 14px;
+  padding: 8px 12px;
+  outline: none;
+  font-family: inherit;
+}
+
+.work-item-edit-input:focus {
+  border-color: rgba(255, 255, 255, 0.3);
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.work-history-resizer {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: col-resize;
+  background-color: transparent;
+  transition: background-color 0.2s ease;
+}
+
+.work-history-resizer:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.work-history-sidebar {
+  width: 40px;
+  background-color: rgba(32, 33, 35, 0.95);
+  backdrop-filter: blur(10px);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.work-history-sidebar:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-expand-icon {
+  color: rgba(236, 236, 241, 0.6);
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.work-history-sidebar:hover .sidebar-expand-icon {
+  color: #ececf1;
+  transform: translateX(2px);
+}
+
+.work-history-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.work-history-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.work-history-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.work-history-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+

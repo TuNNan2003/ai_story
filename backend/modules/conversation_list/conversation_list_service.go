@@ -29,7 +29,7 @@ func NewConversationListService(conversationRepo *repository.ConversationReposit
 }
 
 // GetConversationList 获取对话列表
-func (s *ConversationListService) GetConversationList(page, pageSize int) (*models.ConversationListResponse, error) {
+func (s *ConversationListService) GetConversationList(userID string, page, pageSize int) (*models.ConversationListResponse, error) {
 	if page <= 0 {
 		page = 1
 	}
@@ -37,7 +37,7 @@ func (s *ConversationListService) GetConversationList(page, pageSize int) (*mode
 		pageSize = 20
 	}
 
-	conversations, total, err := s.conversationRepo.List(page, pageSize)
+	conversations, total, err := s.conversationRepo.ListByUserID(userID, page, pageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -51,10 +51,11 @@ func (s *ConversationListService) GetConversationList(page, pageSize int) (*mode
 }
 
 // CreateNewConversation 创建新对话
-func (s *ConversationListService) CreateNewConversation() (*models.Conversation, error) {
+func (s *ConversationListService) CreateNewConversation(userID string) (*models.Conversation, error) {
 	conversationID := utils.GenerateConversationID()
 	conversation := &models.Conversation{
 		ID:          conversationID,
+		UserID:      userID,
 		Title:       "新对话",
 		DocumentIDs: "",
 	}
@@ -66,7 +67,7 @@ func (s *ConversationListService) CreateNewConversation() (*models.Conversation,
 }
 
 // CreateNewConversationWithTitle 创建新对话并生成标题
-func (s *ConversationListService) CreateNewConversationWithTitle(userInputs []string) (*models.Conversation, error) {
+func (s *ConversationListService) CreateNewConversationWithTitle(userID string, userInputs []string) (*models.Conversation, error) {
 	conversationID := utils.GenerateConversationID()
 
 	// 生成标题
@@ -80,6 +81,7 @@ func (s *ConversationListService) CreateNewConversationWithTitle(userInputs []st
 
 	conversation := &models.Conversation{
 		ID:          conversationID,
+		UserID:      userID,
 		Title:       title,
 		DocumentIDs: "",
 	}

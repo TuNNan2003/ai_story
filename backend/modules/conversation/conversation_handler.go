@@ -81,14 +81,15 @@ func (h *ConversationHandler) UpdateConversationTitle(c *gin.Context) {
 	fmt.Println("[conversation_handler UpdateConversationTitle] Start")
 	id := c.Param("id")
 	var req struct {
-		Title string `json:"title" binding:"required"`
+		Title  string `json:"title" binding:"required"`
+		UserID string `json:"user_id" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	err := h.service.UpdateConversationTitle(id, req.Title)
+	err := h.service.UpdateConversationTitle(id, req.UserID, req.Title)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -101,7 +102,13 @@ func (h *ConversationHandler) UpdateConversationTitle(c *gin.Context) {
 func (h *ConversationHandler) DeleteConversation(c *gin.Context) {
 	fmt.Println("[conversation_handler DeleteConversation] Start")
 	id := c.Param("id")
-	err := h.service.DeleteConversation(id)
+	userID := c.Query("user_id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id is required"})
+		return
+	}
+
+	err := h.service.DeleteConversation(id, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

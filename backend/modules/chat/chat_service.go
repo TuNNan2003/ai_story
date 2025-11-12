@@ -12,6 +12,7 @@ import (
 type ChatService struct {
 	conversationRepo *repository.ConversationRepository
 	documentRepo     *repository.DocumentRepository
+	workDocumentRepo *repository.WorkDocumentRepository
 	config           *ChatConfig
 }
 
@@ -22,16 +23,133 @@ type ChatConfig struct {
 	AnthropicBaseURL string
 }
 
-func NewChatService(conversationRepo *repository.ConversationRepository, documentRepo *repository.DocumentRepository, config *ChatConfig) *ChatService {
+func NewChatService(conversationRepo *repository.ConversationRepository, documentRepo *repository.DocumentRepository, workDocumentRepo *repository.WorkDocumentRepository, config *ChatConfig) *ChatService {
 	return &ChatService{
 		conversationRepo: conversationRepo,
 		documentRepo:     documentRepo,
+		workDocumentRepo: workDocumentRepo,
 		config:           config,
 	}
 }
 
 // SendMessage 发送消息并获取流式响应
 func (s *ChatService) SendMessage(req *models.ChatRequest, writer io.Writer) (string, string, error) {
+	// v1.3: 支持灵感模式（work_id）和普通模式（conversation_id）
+	if req.WorkID != "" {
+		return s.sendMessageForWork(req, writer)
+	}
+	return s.sendMessageForConversation(req, writer)
+}
+
+// sendMessageForWork 灵感模式：保存到WorkDocument
+func (s *ChatService) sendMessageForWork(req *models.ChatRequest, writer io.Writer) (string, string, error) {
+	workID := req.WorkID
+	var err error
+
+	// 构建API调用的消息数组
+	var apiMessages []models.Message
+
+	// 从WorkDocument加载历史消息（只获取最近的20条，避免上下文过长）
+	historyDocs, err := s.workDocumentRepo.GetLatestDocumentsByWorkID(workID, 20)
+	if err == nil && len(historyDocs) > 0 {
+		// 反转顺序，使其按时间正序排列（最新的在最后）
+		for i, j := 0, len(historyDocs)-1; i < j; i, j = i+1, j-1 {
+			historyDocs[i], historyDocs[j] = historyDocs[j], historyDocs[i]
+		}
+		// 将历史文档转换为消息格式
+		for _, doc := range historyDocs {
+			apiMessages = append(apiMessages, models.Message{
+				Role:    doc.Role,
+				Content: doc.Content,
+			})
+		}
+	}
+
+	// 添加当前用户消息
+	for _, msg := range req.Messages {
+		apiMessages = append(apiMessages, models.Message{
+			Role:    msg.Role,
+			Content: msg.Content,
+		})
+	}
+
+	// 保存最后一条用户消息（必须存在）
+	var userDocID string
+	if len(req.Messages) > 0 {
+		lastMsg := req.Messages[len(req.Messages)-1]
+		if lastMsg.Role == "user" {
+			userDocID = utils.GenerateDocumentID()
+			userDoc := &models.WorkDocument{
+				ID:      userDocID,
+				WorkID:  workID,
+				UserID:  req.UserID,
+				Title:   "", // 用户消息不需要标题
+				Content: lastMsg.Content,
+				Role:    "user",
+				Model:   req.Model,
+			}
+			err = s.workDocumentRepo.Create(userDoc)
+			if err != nil {
+				return "", "", err
+			}
+		}
+	}
+
+	// 调用大模型API获取流式响应
+	provider, err := services.GetProvider(
+		req.Model,
+		s.config.OpenAIAPIKey,
+		s.config.OpenAIBaseURL,
+		s.config.AnthropicAPIKey,
+		s.config.AnthropicBaseURL,
+	)
+	if err != nil {
+		return "", "", err
+	}
+
+	// 首先创建助手文档（空内容）
+	assistantDocID := utils.GenerateDocumentID()
+	assistantDoc := &models.WorkDocument{
+		ID:      assistantDocID,
+		WorkID:  workID,
+		UserID:  req.UserID,
+		Title:   "", // AI响应不需要标题
+		Content: "",
+		Role:    "assistant",
+		Model:   req.Model,
+	}
+	err = s.workDocumentRepo.Create(assistantDoc)
+	if err != nil {
+		return "", "", err
+	}
+
+	// 创建流式响应收集器，在流式返回时逐步更新文档
+	responseCollector := &workResponseCollector{
+		writer:           writer,
+		content:          "",
+		workDocumentRepo: s.workDocumentRepo,
+		documentID:       assistantDocID,
+		updateBuffer:     "",
+		bufferSize:       0,
+	}
+	err = provider.ChatStream(apiMessages, responseCollector)
+
+	// 无论流式响应是否成功，都要保存剩余的缓冲区内容
+	if responseCollector.updateBuffer != "" {
+		appendErr := s.workDocumentRepo.AppendContent(assistantDocID, responseCollector.updateBuffer)
+		if appendErr != nil {
+			if err == nil {
+				err = appendErr
+			}
+		}
+	}
+
+	// 返回workID和文档ID（为了兼容前端，返回workID作为conversationID）
+	return workID, assistantDocID, nil
+}
+
+// sendMessageForConversation 普通模式：保存到Document
+func (s *ChatService) sendMessageForConversation(req *models.ChatRequest, writer io.Writer) (string, string, error) {
 	var conversationID string
 	var conversation *models.Conversation
 	var err error
@@ -41,6 +159,7 @@ func (s *ChatService) SendMessage(req *models.ChatRequest, writer io.Writer) (st
 		conversationID = utils.GenerateConversationID()
 		conversation = &models.Conversation{
 			ID:          conversationID,
+			UserID:      req.UserID,
 			Title:       s.generateTitle(req.Messages),
 			DocumentIDs: "",
 		}
@@ -50,7 +169,8 @@ func (s *ChatService) SendMessage(req *models.ChatRequest, writer io.Writer) (st
 		}
 	} else {
 		conversationID = req.ConversationID
-		conversation, err = s.conversationRepo.GetByID(conversationID)
+		// 验证对话属于该用户
+		conversation, err = s.conversationRepo.GetByIDAndUserID(conversationID, req.UserID)
 		if err != nil {
 			return "", "", err
 		}
@@ -63,6 +183,7 @@ func (s *ChatService) SendMessage(req *models.ChatRequest, writer io.Writer) (st
 	// 优化：只加载最近的对话上下文，而不是全部历史
 	if req.ConversationID != "" {
 		// 获取对话的历史文档（只获取最近的20条，避免上下文过长）
+		// 注意：这里不需要用户ID过滤，因为conversationID已经通过用户ID验证了
 		historyDocs, err := s.documentRepo.GetLatestDocumentsByConversationID(conversationID, 20)
 		if err == nil && len(historyDocs) > 0 {
 			// 反转顺序，使其按时间正序排列（最新的在最后）
@@ -95,6 +216,7 @@ func (s *ChatService) SendMessage(req *models.ChatRequest, writer io.Writer) (st
 			userDocID = utils.GenerateDocumentID()
 			userDoc := &models.Document{
 				ID:             userDocID,
+				UserID:         req.UserID,
 				ConversationID: conversationID,
 				Role:           "user",
 				Content:        lastMsg.Content,
@@ -128,6 +250,7 @@ func (s *ChatService) SendMessage(req *models.ChatRequest, writer io.Writer) (st
 	assistantDocID := utils.GenerateDocumentID()
 	assistantDoc := &models.Document{
 		ID:             assistantDocID,
+		UserID:         req.UserID,
 		ConversationID: conversationID,
 		Role:           "assistant",
 		Content:        "",
@@ -212,6 +335,16 @@ type responseCollector struct {
 	bufferSize   int
 }
 
+// workResponseCollector 收集流式响应内容并在流式返回时逐步更新WorkDocument（v1.3：灵感模式）
+type workResponseCollector struct {
+	writer           io.Writer
+	content          string
+	workDocumentRepo *repository.WorkDocumentRepository
+	documentID       string
+	updateBuffer     string
+	bufferSize       int
+}
+
 const updateBufferThreshold = 100 // 每100个字符更新一次数据库
 
 func (rc *responseCollector) Write(p []byte) (n int, err error) {
@@ -228,6 +361,38 @@ func (rc *responseCollector) Write(p []byte) (n int, err error) {
 	// 即使写入客户端失败，也要保存到数据库
 	if rc.bufferSize >= updateBufferThreshold {
 		err = rc.documentRepo.AppendContent(rc.documentID, rc.updateBuffer)
+		if err != nil {
+			// 如果保存数据库失败，返回错误
+			// 但如果只是写入客户端失败，不影响数据库保存
+			return len(p), err
+		}
+		rc.updateBuffer = ""
+		rc.bufferSize = 0
+	}
+
+	// 如果写入客户端失败，返回错误，但不影响数据库保存
+	// 这样上层可以知道客户端断开，但数据库已经保存了内容
+	if writeErr != nil {
+		return len(p), writeErr
+	}
+
+	return len(p), nil
+}
+
+func (rc *workResponseCollector) Write(p []byte) (n int, err error) {
+	// 尝试写入到客户端，但如果失败也继续保存到数据库
+	// 这样即使客户端断开连接，已接收的内容也会被保存
+	_, writeErr := rc.writer.Write(p)
+
+	chunk := string(p)
+	rc.content += chunk
+	rc.updateBuffer += chunk
+	rc.bufferSize += len(chunk)
+
+	// 当缓冲区达到阈值时，更新数据库
+	// 即使写入客户端失败，也要保存到数据库
+	if rc.bufferSize >= updateBufferThreshold {
+		err = rc.workDocumentRepo.AppendContent(rc.documentID, rc.updateBuffer)
 		if err != nil {
 			// 如果保存数据库失败，返回错误
 			// 但如果只是写入客户端失败，不影响数据库保存

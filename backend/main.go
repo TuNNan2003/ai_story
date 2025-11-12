@@ -12,6 +12,7 @@ import (
 	documentHandler "grandma/backend/modules/document"
 	documentService "grandma/backend/modules/document"
 	"grandma/backend/modules/story"
+	"grandma/backend/modules/work"
 	"grandma/backend/repository"
 	"log"
 
@@ -53,11 +54,14 @@ func main() {
 	conversationRepo := repository.NewConversationRepository(database.DB)
 	documentRepo := repository.NewDocumentRepository(database.DB)
 	storyRepo := repository.NewStoryRepository(database.DB)
+	workRepo := repository.NewWorkRepository(database.DB)
+	workDocumentRepo := repository.NewWorkDocumentRepository(database.DB)
 
 	// 创建Services
 	chatSvc := chatService.NewChatService(
 		conversationRepo,
 		documentRepo,
+		workDocumentRepo,
 		&chatService.ChatConfig{
 			OpenAIAPIKey:     cfg.OpenAIAPIKey,
 			OpenAIBaseURL:    cfg.OpenAIBaseURL,
@@ -78,6 +82,7 @@ func main() {
 	documentSvc := documentService.NewDocumentService(documentRepo)
 	conversationSvc := conversationService.NewConversationService(conversationRepo, documentRepo)
 	storySvc := story.NewStoryService(storyRepo)
+	workSvc := work.NewWorkService(workRepo, workDocumentRepo)
 
 	// 创建Handlers
 	chatHdlr := chatHandler.NewChatHandler(chatSvc)
@@ -85,6 +90,7 @@ func main() {
 	documentHdlr := documentHandler.NewDocumentHandler(documentSvc)
 	conversationHdlr := conversationHandler.NewConversationHandler(conversationSvc)
 	storiesHdlr := story.NewStoryHandler(storySvc)
+	workHdlr := work.NewWorkHandler(workSvc)
 
 	// 配置路由 - 对话模块
 	api := r.Group("/api")
@@ -116,6 +122,20 @@ func main() {
 		api.POST("/stories", storiesHdlr.CreateStory)
 		api.PUT("/stories/:id", storiesHdlr.UpdateStory)
 		api.DELETE("/stories/:id", storiesHdlr.DeleteStory)
+
+		// 创作模块
+		api.GET("/works", workHdlr.GetWorkList)
+		api.POST("/works", workHdlr.CreateWork)
+		api.PUT("/works/:id/title", workHdlr.UpdateWorkTitle)
+		api.DELETE("/works/:id", workHdlr.DeleteWork)
+
+		// 创作文档模块
+		api.GET("/works/:work_id/documents", workHdlr.GetWorkDocuments)
+		api.POST("/works/:work_id/documents", workHdlr.CreateWorkDocument)
+		api.GET("/work-documents/:id", workHdlr.GetWorkDocumentByID)
+		api.PUT("/work-documents/:id/title", workHdlr.UpdateWorkDocumentTitle)
+		api.PUT("/work-documents/:id/content", workHdlr.UpdateWorkDocumentContent)
+		api.DELETE("/work-documents/:id", workHdlr.DeleteWorkDocument)
 
 		// 获取可用模型列表
 		api.GET("/models", func(c *gin.Context) {

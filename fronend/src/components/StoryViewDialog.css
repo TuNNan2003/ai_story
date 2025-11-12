@@ -1,0 +1,231 @@
+.story-view-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.story-view-dialog {
+  background-color: rgba(32, 33, 35, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  width: 70%;
+  max-width: 1200px;
+  max-height: 95vh;
+  height: 95vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.story-view-dialog-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.story-view-dialog-title {
+  color: #ececf1;
+  font-size: 18px;
+  font-weight: 500;
+  margin: 0;
+}
+
+.story-view-dialog-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.story-view-dialog-close-btn {
+  background: transparent;
+  border: none;
+  color: rgba(236, 236, 241, 0.7);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.story-view-dialog-close-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ececf1;
+}
+
+.story-view-dialog-body {
+  padding: 24px;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.story-view-dialog-content {
+  color: #ececf1;
+  line-height: 1.8;
+  font-size: 15px;
+}
+
+/* Markdown 样式 */
+.story-view-dialog-content h1,
+.story-view-dialog-content h2,
+.story-view-dialog-content h3,
+.story-view-dialog-content h4,
+.story-view-dialog-content h5,
+.story-view-dialog-content h6 {
+  color: #ececf1;
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+.story-view-dialog-content h1 {
+  font-size: 28px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 8px;
+}
+
+.story-view-dialog-content h2 {
+  font-size: 24px;
+}
+
+.story-view-dialog-content h3 {
+  font-size: 20px;
+}
+
+.story-view-dialog-content p {
+  margin-bottom: 16px;
+  color: rgba(236, 236, 241, 0.9);
+}
+
+.story-view-dialog-content ul,
+.story-view-dialog-content ol {
+  margin-bottom: 16px;
+  padding-left: 24px;
+  color: rgba(236, 236, 241, 0.9);
+}
+
+.story-view-dialog-content li {
+  margin-bottom: 8px;
+}
+
+.story-view-dialog-content code {
+  background-color: rgba(0, 0, 0, 0.3);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  color: #f9a825;
+}
+
+.story-view-dialog-content pre {
+  background-color: rgba(0, 0, 0, 0.4);
+  padding: 16px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin-bottom: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.story-view-dialog-content pre code {
+  background-color: transparent;
+  padding: 0;
+  color: #ececf1;
+}
+
+.story-view-dialog-content blockquote {
+  border-left: 4px solid rgba(255, 255, 255, 0.3);
+  padding-left: 16px;
+  margin: 16px 0;
+  color: rgba(236, 236, 241, 0.8);
+  font-style: italic;
+}
+
+.story-view-dialog-content a {
+  color: rgba(59, 130, 246, 0.9);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.story-view-dialog-content a:hover {
+  color: rgba(59, 130, 246, 1);
+  text-decoration: underline;
+}
+
+.story-view-dialog-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+}
+
+.story-view-dialog-content th,
+.story-view-dialog-content td {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.story-view-dialog-content th {
+  background-color: rgba(255, 255, 255, 0.05);
+  font-weight: 600;
+}
+
+.story-view-dialog-content hr {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 24px 0;
+}
+
+.story-view-dialog-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.story-view-dialog-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.story-view-dialog-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.story-view-dialog-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+

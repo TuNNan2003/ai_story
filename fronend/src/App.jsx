@@ -1,8 +1,12 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import CryptoJS from 'crypto-js'
 import ChatContainer from './components/ChatContainer'
 import ConversationHistory from './components/ConversationHistory'
+import WorkHistory from './components/WorkHistory'
+import WorkDocumentList from './components/WorkDocumentList'
 import StoryEditDialog from './components/StoryEditDialog'
+import StoryViewDialog from './components/StoryViewDialog'
+import InspirationDocumentView from './components/InspirationDocumentView'
 import './App.css'
 
 function App() {
@@ -19,34 +23,192 @@ function App() {
   const [storyEditTitle, setStoryEditTitle] = useState('')
   const [storyEditDocumentId, setStoryEditDocumentId] = useState(null)
   const [storyEditStoryId, setStoryEditStoryId] = useState(null)
+  const [storyViewDialogOpen, setStoryViewDialogOpen] = useState(false)
+  const [selectedStory, setSelectedStory] = useState(null)
   const [isHistoryView, setIsHistoryView] = useState(false)
+  const [isInspirationMode, setIsInspirationMode] = useState(false)
+  const [works, setWorks] = useState([])
+  const [currentWorkId, setCurrentWorkId] = useState(null)
+  const [workDocuments, setWorkDocuments] = useState([])
+  const [isModifyOriginal, setIsModifyOriginal] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [hasMoreMessages, setHasMoreMessages] = useState(false)
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false)
+  const [inspirationDocumentViewOpen, setInspirationDocumentViewOpen] = useState(false)
+  const [inspirationDocumentContent, setInspirationDocumentContent] = useState('')
+  const [rightPanelContent, setRightPanelContent] = useState(null) // 右侧面板显示的内容（null表示显示最新AI响应）
   const [historyWidth, setHistoryWidth] = useState(() => {
     // 从localStorage读取保存的宽度，默认260px
     const saved = localStorage.getItem('conversationHistoryWidth')
     return saved ? parseInt(saved, 10) : 260
   })
   
+  // 用户ID：从localStorage获取或生成新的，确保多次打开网页时ID一致
+  const [userId, setUserId] = useState(() => {
+    const saved = localStorage.getItem('grandma_user_id')
+    if (saved) {
+      return saved
+    }
+    // 生成新的用户ID（使用时间戳和随机数）
+    const newUserId = 'user_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15)
+    localStorage.setItem('grandma_user_id', newUserId)
+    return newUserId
+  })
+  
   // 用于跟踪当前的流式响应读取器，以便在切换对话时取消
   const readerRef = useRef(null)
   const abortControllerRef = useRef(null)
   const currentConversationIdRef = useRef(null)
+  const rightPanelContentRef = useRef(null)
+  const currentWorkIdRef = useRef(null) // v1.3: 用于在流式响应中跟踪currentWorkId
+  const isSendingMessageRef = useRef(false) // v1.3: 用于跟踪是否正在发送消息，避免在发送消息时加载历史消息
+  // v1.3: 使用ref存储函数，避免初始化顺序问题
+  const loadWorkMessagesRef = useRef(null)
+  const loadWorkMessagesWithCallbackRef = useRef(null)
   
   // 同步currentConversationId到ref，以便在异步函数中使用最新值
   useEffect(() => {
     currentConversationIdRef.current = currentConversationId
   }, [currentConversationId])
+  
+  // 同步rightPanelContent到ref，以便在异步函数中使用最新值
+  useEffect(() => {
+    rightPanelContentRef.current = rightPanelContent
+  }, [rightPanelContent])
+
+  // v1.3: 同步currentWorkId到ref，以便在异步函数中使用最新值
+  useEffect(() => {
+    currentWorkIdRef.current = currentWorkId
+  }, [currentWorkId])
 
   useEffect(() => {
     fetchModels()
     fetchConversations()
     fetchStories()
+    fetchWorks()
   }, [])
+
+  // 当灵感模式开启时，获取works；当选择work时，获取documents
+  useEffect(() => {
+    if (isInspirationMode) {
+      fetchWorks()
+      // v1.3: 如果已有currentWorkId，加载该创作的消息（在loadWorkMessages定义后调用）
+      // 注意：loadWorkMessages在下面定义，但函数会被提升，所以可以调用
+    } else {
+      // v1.3: 关闭灵感模式时，清空消息和右侧面板
+      setMessages([])
+      setRightPanelContent(null)
+      setCurrentWorkId(null)
+    }
+  }, [isInspirationMode])
+  
+  // v1.3: 当灵感模式开启且currentWorkId变化时，加载该创作的消息
+  useEffect(() => {
+    // 如果正在发送消息，不要加载历史消息（避免覆盖正在发送的消息）
+    if (isSendingMessageRef.current) {
+      return
+    }
+    
+    if (isInspirationMode && currentWorkId) {
+      // 如果loadWorkMessagesWithCallback已经定义，使用它；否则只使用loadWorkMessages
+      if (loadWorkMessagesWithCallbackRef.current) {
+        loadWorkMessagesWithCallbackRef.current(currentWorkId)
+      } else if (loadWorkMessagesRef.current) {
+        loadWorkMessagesRef.current(currentWorkId)
+      }
+    } else if (isInspirationMode && !currentWorkId) {
+      // 如果没有创作，且消息列表为空，不需要清空（避免在发送消息时误清空）
+      // 注意：当用户第一次进入灵感模式并发送消息时，会先创建work，然后添加消息
+      // 如果在这里清空消息，可能会在消息添加之前清空，导致hasConversation为false
+      // 所以，我们只在明确需要清空时才清空（比如用户切换了模式或选择了其他创作）
+      // 这里暂时不清空，让handleSendMessage来处理
+      // 但是，如果用户切换了模式或选择了其他创作，消息应该已经被清空了
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isInspirationMode, currentWorkId])
+
+  useEffect(() => {
+    if (currentWorkId) {
+      fetchWorkDocuments(currentWorkId)
+    }
+  }, [currentWorkId])
+
+  // 辅助函数：为URL添加用户ID参数
+  const addUserIdToUrl = (url) => {
+    const separator = url.includes('?') ? '&' : '?'
+    return `${url}${separator}user_id=${encodeURIComponent(userId)}`
+  }
+
+  // v1.3: 加载创作的历史消息（从WorkDocument）
+  // 必须在所有useEffect之前定义，因为useEffect会引用它
+  // 注意：这个函数不包含handleAddToStory，因为它还没定义
+  const loadWorkMessages = useCallback(async (workId) => {
+    try {
+      // 获取该创作的所有文档（按时间正序）
+      const response = await fetch(addUserIdToUrl(`/api/works/${workId}/documents`))
+      if (!response.ok) {
+        throw new Error('Failed to get work documents')
+      }
+
+      const data = await response.json()
+      const documents = data.documents || []
+
+      // 过滤出有role的文档（对话消息），并按时间正序排列
+      const conversationDocs = documents
+        .filter(doc => doc.role === 'user' || doc.role === 'assistant')
+        .sort((a, b) => {
+          return new Date(a.created_at) - new Date(b.created_at)
+        })
+
+      // 转换为消息格式
+      // 注意：这里不能直接使用handleAddToStory，因为它还没定义
+      // 我们会在后面通过loadWorkMessagesWithCallback添加onAddToStory
+      const workMessages = conversationDocs.map((doc) => ({
+        id: doc.id,
+        documentId: doc.id,
+        role: doc.role,
+        content: doc.content,
+        // onAddToStory会在后面通过loadWorkMessagesWithCallback添加
+      }))
+
+      // 设置消息
+      setMessages(workMessages)
+      setIsHistoryView(true)
+      
+      // 如果最后一条消息是AI响应，自动在右侧显示
+      if (workMessages.length > 0) {
+        const lastMessage = workMessages[workMessages.length - 1]
+        if (lastMessage.role === 'assistant' && lastMessage.content) {
+          setRightPanelContent(lastMessage.content)
+        }
+      }
+      
+      setIsLoading(false)
+      setHasMoreMessages(false) // WorkDocument暂时不支持翻页
+      
+      // 触发滚动到底部
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          setShouldScrollToBottom(true)
+          setTimeout(() => {
+            setShouldScrollToBottom(false)
+          }, 300)
+        }, 150)
+      })
+    } catch (error) {
+      console.error('Failed to load work messages:', error)
+      setMessages([])
+    }
+  }, [userId])
+
+  // 将loadWorkMessages保存到ref，以便在useEffect中使用
+  useEffect(() => {
+    loadWorkMessagesRef.current = loadWorkMessages
+  }, [loadWorkMessages])
 
   const fetchModels = async () => {
     try {
+      // models接口不需要用户ID，因为模型列表是全局的
       const response = await fetch('/api/models')
       const data = await response.json()
       setModels(data.models)
@@ -60,7 +222,7 @@ function App() {
 
   const fetchConversations = async () => {
     try {
-      const response = await fetch('/api/conversations?page=1&page_size=50')
+      const response = await fetch(addUserIdToUrl('/api/conversations?page=1&page_size=50'))
       const data = await response.json()
       setConversations(data.conversations || [])
     } catch (error) {
@@ -70,11 +232,31 @@ function App() {
 
   const fetchStories = async () => {
     try {
-      const response = await fetch('/api/stories?guid=default')
+      const response = await fetch(addUserIdToUrl('/api/stories?guid=default'))
       const data = await response.json()
       setStories(data.stories || [])
     } catch (error) {
       console.error('Failed to fetch stories:', error)
+    }
+  }
+
+  const fetchWorks = async () => {
+    try {
+      const response = await fetch(addUserIdToUrl('/api/works'))
+      const data = await response.json()
+      setWorks(data.works || [])
+    } catch (error) {
+      console.error('Failed to fetch works:', error)
+    }
+  }
+
+  const fetchWorkDocuments = async (workId) => {
+    try {
+      const response = await fetch(addUserIdToUrl(`/api/works/${workId}/documents`))
+      const data = await response.json()
+      setWorkDocuments(data.documents || [])
+    } catch (error) {
+      console.error('Failed to fetch work documents:', error)
     }
   }
 
@@ -99,6 +281,7 @@ function App() {
                 },
                 body: JSON.stringify({
                   user_inputs: userInputs,
+                  user_id: userId,
                 }),
               })
 
@@ -117,6 +300,12 @@ function App() {
       // 创建新对话
       const response = await fetch('/api/conversations/new', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+        }),
       })
 
       if (response.ok) {
@@ -133,13 +322,14 @@ function App() {
 
   const handleRenameConversation = async (conversationId, newTitle) => {
     try {
-      const response = await fetch(`/api/conversations/${conversationId}/title`, {
+      const response = await fetch(addUserIdToUrl(`/api/conversations/${conversationId}/title`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           title: newTitle,
+          user_id: userId,
         }),
       })
       if (response.ok) {
@@ -152,7 +342,7 @@ function App() {
 
   const handleDeleteConversation = async (conversationId) => {
     try {
-      const response = await fetch(`/api/conversations/${conversationId}`, {
+      const response = await fetch(addUserIdToUrl(`/api/conversations/${conversationId}`), {
         method: 'DELETE',
       })
       if (response.ok) {
@@ -178,11 +368,11 @@ function App() {
     while (hasMore) {
       try {
         // 获取文档ID列表
-        const url = beforeID
+        const baseUrl = beforeID
           ? `/api/documents/ids?conversation_id=${convId}&before_id=${beforeID}&limit=100`
           : `/api/documents/ids?conversation_id=${convId}&limit=100`
         
-        const idsResponse = await fetch(url)
+        const idsResponse = await fetch(addUserIdToUrl(baseUrl))
         if (!idsResponse.ok) {
           break
         }
@@ -197,7 +387,7 @@ function App() {
 
         // 并发请求所有文档的详细信息
         const documentPromises = documentIDs.map(id =>
-          fetch(`/api/documents/${id}`)
+          fetch(addUserIdToUrl(`/api/documents/${id}`))
             .then(response => {
               if (!response.ok) {
                 throw new Error(`Failed to get document ${id}`)
@@ -293,6 +483,7 @@ function App() {
               },
               body: JSON.stringify({
                 user_inputs: userInputs,
+                user_id: userId,
               }),
             })
 
@@ -314,10 +505,15 @@ function App() {
     // 清空之前的消息，避免显示旧数据
     setMessages([])
     
+    // v1.2: 切换对话时，重置右侧面板，让右侧显示新对话的最新响应
+    if (isInspirationMode) {
+      setRightPanelContent(null)
+    }
+    
     try {
       // 第一步：请求文档ID列表接口，获取这个对话的最新10个文档的ID
       // 后端返回的ID列表已经按时间正序排列（最早的在前，最新的在后）
-      const idsResponse = await fetch(`/api/documents/ids?conversation_id=${conversationId}&limit=10`)
+      const idsResponse = await fetch(addUserIdToUrl(`/api/documents/ids?conversation_id=${conversationId}&limit=10`))
       if (!idsResponse.ok) {
         throw new Error('Failed to get document IDs')
       }
@@ -335,7 +531,7 @@ function App() {
       // 第二步：并发请求文档管理模块，同时发送多个请求，每个请求获取一个文档的详细信息
       // 注意：这里只获取最新10条文档，不会获取全部对话
       const documentPromises = documentIDs.map(id =>
-        fetch(`/api/documents/${id}`)
+        fetch(addUserIdToUrl(`/api/documents/${id}`))
           .then(response => {
             if (!response.ok) {
               throw new Error(`Failed to get document ${id}`)
@@ -375,6 +571,14 @@ function App() {
       setMessages(conversationMessages)
       setIsHistoryView(true) // 加载历史对话后，设置为历史视图（不使用打字机效果）
       
+      // v1.2: 在灵感模式下，如果最后一条消息是AI响应，自动在右侧显示
+      if (isInspirationMode) {
+        const lastMessage = conversationMessages[conversationMessages.length - 1]
+        if (lastMessage && lastMessage.role === 'assistant' && lastMessage.content) {
+          setRightPanelContent(lastMessage.content)
+        }
+      }
+      
       // 重置加载状态（切换对话时，无论之前是否在加载，都应该重置）
       setIsLoading(false)
       
@@ -390,7 +594,7 @@ function App() {
           if (currentConversationIdRef.current === conversationId) {
             try {
               // 重新获取文档ID列表
-              const refreshIdsResponse = await fetch(`/api/documents/ids?conversation_id=${conversationId}&limit=10`)
+              const refreshIdsResponse = await fetch(addUserIdToUrl(`/api/documents/ids?conversation_id=${conversationId}&limit=10`))
               if (refreshIdsResponse.ok) {
                 const refreshIdsData = await refreshIdsResponse.json()
                 const refreshDocumentIDs = refreshIdsData.document_ids || []
@@ -401,7 +605,7 @@ function App() {
                      refreshDocumentIDs[refreshDocumentIDs.length - 1] !== documentIDs[documentIDs.length - 1])) {
                   // 重新加载文档
                   const refreshDocumentPromises = refreshDocumentIDs.map(id =>
-                    fetch(`/api/documents/${id}`)
+                    fetch(addUserIdToUrl(`/api/documents/${id}`))
                       .then(response => {
                         if (!response.ok) {
                           throw new Error(`Failed to get document ${id}`)
@@ -474,7 +678,7 @@ function App() {
     try {
       // 第一步：获取比earliestDocId更早的文档ID列表
       const idsResponse = await fetch(
-        `/api/documents/ids?conversation_id=${currentConversationId}&before_id=${earliestDocId}&limit=10`
+        addUserIdToUrl(`/api/documents/ids?conversation_id=${currentConversationId}&before_id=${earliestDocId}&limit=10`)
       )
 
       if (!idsResponse.ok) {
@@ -489,7 +693,7 @@ function App() {
 
       // 第二步：并发请求文档管理模块，同时发送多个请求，每个请求获取一个文档的详细信息
       const documentPromises = idsData.document_ids.map(id =>
-        fetch(`/api/documents/${id}`)
+        fetch(addUserIdToUrl(`/api/documents/${id}`))
           .then(response => {
             if (!response.ok) {
               throw new Error(`Failed to get document ${id}`)
@@ -546,6 +750,12 @@ function App() {
     try {
       const response = await fetch('/api/conversations/new', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+        }),
       })
       if (response.ok) {
         const data = await response.json()
@@ -583,10 +793,10 @@ function App() {
     }
   }
 
-  const handleAddToStory = async (documentId) => {
+  const handleAddToStory = useCallback(async (documentId) => {
     try {
       // 获取文档内容
-      const docResponse = await fetch(`/api/documents/${documentId}`)
+      const docResponse = await fetch(addUserIdToUrl(`/api/documents/${documentId}`))
       if (!docResponse.ok) {
         throw new Error('Failed to get document')
       }
@@ -610,7 +820,25 @@ function App() {
     } catch (error) {
       console.error('Failed to add to story:', error)
     }
-  }
+  }, [userId])
+
+  // v1.3: 更新loadWorkMessages，添加handleAddToStory依赖，并在加载消息后添加onAddToStory回调
+  const loadWorkMessagesWithCallback = useCallback(async (workId) => {
+    await loadWorkMessages(workId)
+    // 加载完成后，更新消息以添加onAddToStory回调
+    setMessages((prev) => {
+      return prev.map(msg => ({
+        ...msg,
+        onAddToStory: msg.role === 'assistant' ? handleAddToStory : undefined,
+      }))
+    })
+  }, [loadWorkMessages, handleAddToStory])
+
+  // 将loadWorkMessagesWithCallback保存到ref，以便在useEffect中使用
+  useEffect(() => {
+    loadWorkMessagesWithCallbackRef.current = loadWorkMessagesWithCallback
+  }, [loadWorkMessagesWithCallback])
+
 
   const handleSaveStory = async (content, title) => {
     try {
@@ -625,6 +853,7 @@ function App() {
         title: title,
         content: content,
         content_hash: contentHash,
+        user_id: userId,
       }
 
       // 只有在创建时才需要document_id
@@ -633,7 +862,7 @@ function App() {
         requestBody.guid = 'default'
       }
 
-      const response = await fetch(url, {
+      const response = await fetch(addUserIdToUrl(url), {
         method: method,
         headers: {
           'Content-Type': 'application/json',
@@ -678,7 +907,7 @@ function App() {
 
   const handleDeleteStory = async (story) => {
     try {
-      const response = await fetch(`/api/stories/${story.id}`, {
+      const response = await fetch(addUserIdToUrl(`/api/stories/${story.id}`), {
         method: 'DELETE',
       })
 
@@ -696,34 +925,233 @@ function App() {
   }
 
   const handleSelectStory = async (story) => {
-    // 当选择故事时，加载对应的文档内容
+    // 当选择故事时，打开故事查看对话框
+    setSelectedStory(story)
+    setStoryViewDialogOpen(true)
+  }
+
+  // 处理查看灵感模式下的文档
+  const handleViewInspirationDocument = (documentId, content) => {
+    // v1.2: 不再打开浮层，而是在右侧直接展示文档内容
+    setRightPanelContent(content || '')
+  }
+
+  // 创作相关处理函数
+  const handleNewWork = async () => {
     try {
-      const docResponse = await fetch(`/api/documents/${story.document_id}`)
-      if (docResponse.ok) {
-        const doc = await docResponse.json()
-        // 显示故事内容（可以创建一个新的消息显示）
-        // 这里可以根据需要实现故事查看功能
-        console.log('Story selected:', story)
+      const response = await fetch('/api/works', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          title: '新创作',
+        }),
+      })
+      if (response.ok) {
+        const work = await response.json()
+        await fetchWorks()
+        setCurrentWorkId(work.id)
       }
     } catch (error) {
-      console.error('Failed to load story:', error)
+      console.error('Failed to create work:', error)
+    }
+  }
+
+  const handleSelectWork = async (workId) => {
+    // 如果点击的是当前创作，不发起请求
+    if (workId === currentWorkId) {
+      return
+    }
+
+    // v1.3: 切换创作时，清空之前的消息
+    setMessages([])
+    setRightPanelContent(null)
+    
+    setCurrentWorkId(workId)
+    await fetchWorkDocuments(workId)
+    
+    // v1.3: 在灵感模式下，加载该创作的历史对话消息
+    if (isInspirationMode) {
+      await loadWorkMessagesWithCallback(workId)
+    }
+  }
+
+  const handleRenameWork = async (workId, newTitle) => {
+    try {
+      const response = await fetch(`/api/works/${workId}/title`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          title: newTitle,
+        }),
+      })
+      if (response.ok) {
+        await fetchWorks()
+      }
+    } catch (error) {
+      console.error('Failed to rename work:', error)
+    }
+  }
+
+  const handleDeleteWork = async (workId) => {
+    try {
+      const response = await fetch(addUserIdToUrl(`/api/works/${workId}`), {
+        method: 'DELETE',
+      })
+      if (response.ok) {
+        await fetchWorks()
+        if (currentWorkId === workId) {
+          setCurrentWorkId(null)
+          setWorkDocuments([])
+          // v1.3: 删除当前创作时，清空消息和右侧面板
+          if (isInspirationMode) {
+            setMessages([])
+            setRightPanelContent(null)
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to delete work:', error)
+    }
+  }
+
+  // v1.3: WorkDocument相关处理函数
+  const handleNewDocument = async () => {
+    if (!currentWorkId) return
+    try {
+      const response = await fetch(`/api/works/${currentWorkId}/documents`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          work_id: currentWorkId,
+          title: '新文档',
+          content: '',
+        }),
+      })
+      if (response.ok) {
+        await fetchWorkDocuments(currentWorkId)
+      }
+    } catch (error) {
+      console.error('Failed to create document:', error)
+    }
+  }
+
+  const handleRenameDocument = async (docId, newTitle) => {
+    try {
+      const response = await fetch(`/api/work-documents/${docId}/title`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          title: newTitle,
+        }),
+      })
+      if (response.ok) {
+        await fetchWorkDocuments(currentWorkId)
+      }
+    } catch (error) {
+      console.error('Failed to rename document:', error)
+    }
+  }
+
+  const handleDeleteDocument = async (docId) => {
+    try {
+      const response = await fetch(addUserIdToUrl(`/api/work-documents/${docId}`), {
+        method: 'DELETE',
+      })
+      if (response.ok) {
+        await fetchWorkDocuments(currentWorkId)
+        // v1.3: 如果删除的是当前显示的消息，清空消息列表
+        setMessages((prev) => prev.filter(msg => msg.documentId !== docId))
+      }
+    } catch (error) {
+      console.error('Failed to delete document:', error)
+    }
+  }
+
+  const handleSelectDocument = async (doc) => {
+    // v1.3: 选择文档时，在右侧显示文档内容
+    if (isInspirationMode) {
+      setRightPanelContent(doc.content || '')
     }
   }
 
   const handleSendMessage = async (message) => {
     if (!message.trim() || isLoading) return
 
-    // 检查是否是新对话（第一次发送消息）
-    const isNewConversation = !currentConversationId
+    // v3: 标记正在发送消息，避免useEffect加载历史消息
+    isSendingMessageRef.current = true
+
+    // 检查是否是新对话/创作（第一次发送消息）
+    // v1.3: 在灵感模式下检查currentWorkId，否则检查currentConversationId
+    const isNewConversation = isInspirationMode ? !currentWorkId : !currentConversationId
 
     // 发送新消息时，切换到非历史视图（使用打字机效果）
     setIsHistoryView(false)
 
-    // 首先获取或创建对话ID
-    const conversationId = await getOrCreateConversationId()
-    if (!conversationId) {
+    // v1.2: 发送新消息时，重置右侧面板为null，这样右侧会自动显示新的AI响应
+    if (isInspirationMode) {
+      setRightPanelContent(null)
+    }
+
+    // v1.3: 在灵感模式下，使用work_id；否则使用conversation_id
+    let targetId = null
+    if (isInspirationMode) {
+      // 灵感模式：确保有currentWorkId
+      if (!currentWorkId) {
+        // 如果没有创作，创建一个新创作
+        try {
+          const workResponse = await fetch('/api/works', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              user_id: userId,
+              title: '新创作',
+            }),
+          })
+          if (workResponse.ok) {
+            const work = await workResponse.json()
+            setCurrentWorkId(work.id)
+            currentWorkIdRef.current = work.id // 立即更新ref，确保流式响应中可以访问
+            await fetchWorks()
+            targetId = work.id
+          } else {
+            console.error('Failed to create work')
+            isSendingMessageRef.current = false // 重置标记
+            return
+          }
+        } catch (error) {
+          console.error('Failed to create work:', error)
+          isSendingMessageRef.current = false // 重置标记
+          return
+        }
+      } else {
+        targetId = currentWorkId
+        // 确保ref也更新了（虽然useEffect会同步，但这里也更新一下确保一致性）
+        if (currentWorkIdRef.current !== currentWorkId) {
+          currentWorkIdRef.current = currentWorkId
+        }
+      }
+    } else {
+      // 普通模式：获取或创建对话ID
+      targetId = await getOrCreateConversationId()
+      if (!targetId) {
       console.error('Failed to get conversation ID')
+      isSendingMessageRef.current = false // 重置标记
       return
+      }
     }
 
     const userMessage = {
@@ -751,21 +1179,30 @@ function App() {
 
     try {
       // 前端仅携带本次用户请求的内容
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          conversation_id: conversationId,
+      // v1.3: 在灵感模式下传递work_id，否则传递conversation_id
+      const requestBody = {
           model: selectedModel,
+          user_id: userId,
           messages: [
             {
               role: 'user',
               content: message,
             },
           ],
-        }),
+      }
+      
+      if (isInspirationMode) {
+        requestBody.work_id = targetId
+      } else {
+        requestBody.conversation_id = targetId
+      }
+      
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
         signal: abortController.signal,
       })
 
@@ -787,9 +1224,10 @@ function App() {
         const { done, value } = await reader.read()
         if (done) break
 
-        // 检查是否还在当前对话（如果切换了对话，停止处理）
-        // 使用ref来获取最新的conversationId值
-        if (currentConversationIdRef.current !== conversationId) {
+        // 检查是否还在当前对话/创作（如果切换了，停止处理）
+        // v1.3: 在灵感模式下检查currentWorkIdRef，否则检查currentConversationIdRef
+        const currentTargetId1 = isInspirationMode ? currentWorkIdRef.current : currentConversationIdRef.current
+        if (currentTargetId1 !== targetId) {
           await reader.cancel()
           break
         }
@@ -826,9 +1264,10 @@ function App() {
           fullContent += chunk
         }
 
-        // 检查是否还在当前对话（如果切换了对话，停止更新消息）
-        // 使用ref来获取最新的conversationId值
-        if (currentConversationIdRef.current === conversationId) {
+        // 检查是否还在当前对话/创作（如果切换了，停止更新消息）
+        // v1.3: 在灵感模式下检查currentWorkIdRef，否则检查currentConversationIdRef
+        const currentTargetId2 = isInspirationMode ? currentWorkIdRef.current : currentConversationIdRef.current
+        if (currentTargetId2 === targetId) {
           setMessages((prev) => {
             const newMessages = [...prev]
             const lastMessage = newMessages[newMessages.length - 1]
@@ -850,6 +1289,10 @@ function App() {
             }
             return newMessages
           })
+          
+          // v1.2: 在灵感模式下，如果右侧面板显示的是最新响应（rightPanelContentRef.current为null）
+          // 注意：流式更新时不要设置rightPanelContent，让ChatContainer从lastAssistantContent获取内容
+          // 这样可以保持isLoading状态正确，打字机效果才能正常工作
         }
       }
       
@@ -886,7 +1329,9 @@ function App() {
       // 流式响应结束后，只更新文档ID和回调，不更新内容（避免触发打字机效果重新渲染）
       // 内容已经在循环内更新过了，这里只需要更新元数据
       // 注意：不更新id（因为id是key），而是添加documentId属性，避免key变化导致组件重新挂载
-      if (currentConversationIdRef.current === conversationId) {
+      // v1.3: 在灵感模式下检查currentWorkIdRef，否则检查currentConversationIdRef
+      const currentTargetId = isInspirationMode ? currentWorkIdRef.current : currentConversationIdRef.current
+      if (currentTargetId === targetId) {
         setMessages((prev) => {
           const lastMessage = prev[prev.length - 1]
           if (!lastMessage || lastMessage.role !== 'assistant') {
@@ -930,10 +1375,23 @@ function App() {
       readerRef.current = null
       abortControllerRef.current = null
       
+      // v1.2: 在灵感模式下，流式响应结束后，如果右侧面板显示的是最新响应（rightPanelContentRef.current为null）
+      // 注意：不需要设置rightPanelContent，因为ChatContainer会从lastAssistantContent获取内容
+      // 这样可以保持打字机效果正常工作
+      
+      // v1.3: 在灵感模式下，刷新workDocuments列表；在普通模式下，只有在新对话第一次发送消息时才刷新列表
+      if (isInspirationMode) {
+        // 使用ref获取最新的currentWorkId，因为state可能还没更新
+        const workId = currentWorkIdRef.current || currentWorkId
+        if (workId) {
+          await fetchWorkDocuments(workId)
+        }
+      } else {
       // 只有在新对话第一次发送消息时才刷新列表（更新标题）
       // 已存在的对话不需要刷新，因为用户已经在当前对话中
       if (isNewConversation) {
         await fetchConversations()
+        }
       }
       
       // 注意：不再需要单独更新onAddToStory回调，因为在上面的代码中已经处理过了
@@ -944,13 +1402,16 @@ function App() {
         // 清理引用
         readerRef.current = null
         abortControllerRef.current = null
+        // v3: 重置发送消息标记
+        isSendingMessageRef.current = false
         return
       }
       
       console.error('Error:', error)
-      // 只有在当前对话时才更新错误消息
-      // 使用ref来获取最新的conversationId值
-      if (currentConversationIdRef.current === conversationId) {
+      // 只有在当前对话/创作时才更新错误消息
+      // v1.3: 在灵感模式下检查currentWorkIdRef，否则检查currentConversationIdRef
+      const currentTargetId = isInspirationMode ? currentWorkIdRef.current : currentConversationIdRef.current
+      if (currentTargetId === targetId) {
         setMessages((prev) => {
           const newMessages = [...prev]
           const lastMessage = newMessages[newMessages.length - 1]
@@ -961,52 +1422,86 @@ function App() {
         })
       }
     } finally {
-      // 只有在当前对话时才重置加载状态
-      // 使用ref来获取最新的conversationId值
-      if (currentConversationIdRef.current === conversationId) {
+      // 只有在当前对话/创作时才重置加载状态
+      // v1.3: 在灵感模式下检查currentWorkIdRef，否则检查currentConversationIdRef
+      const currentTargetId = isInspirationMode ? currentWorkIdRef.current : currentConversationIdRef.current
+      if (currentTargetId === targetId) {
         setIsLoading(false)
       }
       // 清理引用
       readerRef.current = null
       abortControllerRef.current = null
+      // v3: 重置发送消息标记，允许useEffect加载历史消息
+      isSendingMessageRef.current = false
     }
   }
 
   return (
     <div className="app">
-      <ConversationHistory
-        conversations={conversations}
-        currentConversationId={currentConversationId}
-        onSelectConversation={handleSelectConversation}
-        isCollapsed={isHistoryCollapsed}
-        onToggleCollapse={() => setIsHistoryCollapsed(!isHistoryCollapsed)}
-        onRenameConversation={handleRenameConversation}
-        onDeleteConversation={handleDeleteConversation}
-        width={historyWidth}
-        onWidthChange={(newWidth) => {
-          setHistoryWidth(newWidth)
-          localStorage.setItem('conversationHistoryWidth', newWidth.toString())
-        }}
-        stories={stories}
-        onSelectStory={handleSelectStory}
-        onEditStory={handleEditStory}
-        onDeleteStory={handleDeleteStory}
-      />
+      {isInspirationMode ? (
+        <WorkHistory
+          works={works}
+          currentWorkId={currentWorkId}
+          onSelectWork={handleSelectWork}
+          isCollapsed={isHistoryCollapsed}
+          onToggleCollapse={() => setIsHistoryCollapsed(!isHistoryCollapsed)}
+          onRenameWork={handleRenameWork}
+          onDeleteWork={handleDeleteWork}
+          width={historyWidth}
+          onWidthChange={(newWidth) => {
+            setHistoryWidth(newWidth)
+            localStorage.setItem('conversationHistoryWidth', newWidth.toString())
+          }}
+          onNewWork={handleNewWork}
+        />
+      ) : (
+        <ConversationHistory
+          conversations={conversations}
+          currentConversationId={currentConversationId}
+          onSelectConversation={handleSelectConversation}
+          isCollapsed={isHistoryCollapsed}
+          onToggleCollapse={() => setIsHistoryCollapsed(!isHistoryCollapsed)}
+          onRenameConversation={handleRenameConversation}
+          onDeleteConversation={handleDeleteConversation}
+          width={historyWidth}
+          onWidthChange={(newWidth) => {
+            setHistoryWidth(newWidth)
+            localStorage.setItem('conversationHistoryWidth', newWidth.toString())
+          }}
+          stories={stories}
+          onSelectStory={handleSelectStory}
+          onEditStory={handleEditStory}
+          onDeleteStory={handleDeleteStory}
+        />
+      )}
       <div className="main-content">
-        <div className="new-chat-button-container">
-          <button onClick={handleNewChat} className="new-chat-button-top">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path
-                d="M8 1v14M1 8h14"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
-            新对话
-          </button>
-        </div>
-        <ChatContainer
+        <div className="main-content-chat">
+          <div className="new-chat-button-container">
+            <button onClick={handleNewChat} className="new-chat-button-top">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path
+                  d="M8 1v14M1 8h14"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+              新对话
+            </button>
+            <div className="inspiration-mode-toggle">
+              <label className="toggle-label">
+                <input
+                  type="checkbox"
+                  checked={isInspirationMode}
+                  onChange={(e) => setIsInspirationMode(e.target.checked)}
+                  className="toggle-input"
+                />
+                <span className="toggle-slider"></span>
+                <span className="toggle-text">灵感模式</span>
+              </label>
+            </div>
+          </div>
+          <ChatContainer
           messages={messages}
           onSendMessage={handleSendMessage}
           isLoading={isLoading}
@@ -1018,7 +1513,23 @@ function App() {
           canLoadMore={isHistoryView && hasMoreMessages}
           isLoadingMore={isLoadingMore}
           shouldScrollToBottom={shouldScrollToBottom}
+          isInspirationMode={isInspirationMode}
+          currentWorkId={currentWorkId}
+          isModifyOriginal={isModifyOriginal}
+          onModifyOriginalChange={setIsModifyOriginal}
+          onViewDocument={handleViewInspirationDocument}
+          rightPanelContent={isInspirationMode ? rightPanelContent : null}
         />
+        </div>
+        {isInspirationMode && currentWorkId && (
+          <WorkDocumentList
+            documents={workDocuments}
+            onNewDocument={handleNewDocument}
+            onRenameDocument={handleRenameDocument}
+            onDeleteDocument={handleDeleteDocument}
+            onSelectDocument={handleSelectDocument}
+          />
+        )}
       </div>
         <StoryEditDialog
         isOpen={storyEditDialogOpen}
@@ -1034,6 +1545,23 @@ function App() {
         }}
         onSave={handleSaveStory}
       />
+      <StoryViewDialog
+        isOpen={storyViewDialogOpen}
+        story={selectedStory}
+        onClose={() => {
+          setStoryViewDialogOpen(false)
+          setSelectedStory(null)
+        }}
+      />
+      {/* v1.2: 不再使用InspirationDocumentView浮层，改为在右侧直接展示 */}
+      {/* <InspirationDocumentView
+        isOpen={inspirationDocumentViewOpen}
+        content={inspirationDocumentContent}
+        onClose={() => {
+          setInspirationDocumentViewOpen(false)
+          setInspirationDocumentContent('')
+        }}
+      /> */}
     </div>
   )
 }

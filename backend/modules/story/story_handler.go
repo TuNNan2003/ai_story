@@ -28,7 +28,12 @@ func (h *StoryHandler) GetStoryList(c *gin.Context) {
 		req.Guid = "default"
 	}
 
-	response, err := h.service.GetStoryList(req.Guid)
+	if req.UserID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id is required"})
+		return
+	}
+
+	response, err := h.service.GetStoryList(req.UserID, req.Guid)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -52,7 +57,7 @@ func (h *StoryHandler) CreateStory(c *gin.Context) {
 		return
 	}
 
-	story, err := h.service.CreateStory(req.Guid, req.DocumentId, req.Title, req.Content, req.ContentHash)
+	story, err := h.service.CreateStory(req.UserID, req.Guid, req.DocumentId, req.Title, req.Content, req.ContentHash)
 	if err != nil {
 		// 根据错误类型返回不同的状态码
 		if err.Error() == "duplicate_story" {
@@ -74,7 +79,13 @@ func (h *StoryHandler) CreateStory(c *gin.Context) {
 func (h *StoryHandler) DeleteStory(c *gin.Context) {
 	fmt.Println("[story_handler DeleteStory] Start")
 	id := c.Param("id")
-	err := h.service.DeleteStory(id)
+	userID := c.Query("user_id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id is required"})
+		return
+	}
+
+	err := h.service.DeleteStory(id, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -101,7 +112,12 @@ func (h *StoryHandler) UpdateStory(c *gin.Context) {
 		return
 	}
 
-	story, err := h.service.UpdateStory(id, req.Title, req.Content, req.ContentHash)
+	if req.UserID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id is required"})
+		return
+	}
+
+	story, err := h.service.UpdateStory(id, req.UserID, req.Title, req.Content, req.ContentHash)
 	if err != nil {
 		// 根据错误类型返回不同的状态码
 		if err.Error() == "duplicate_story" {
